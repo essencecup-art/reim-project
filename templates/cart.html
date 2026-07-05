@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+
+{% block title %}Your Order | LuxeEats{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <div class="border-b border-stone-800 pb-4 flex justify-between items-end">
+        <div>
+            <h1 class="text-4xl font-extrabold tracking-tight text-stone-100">Your Selection</h1>
+            <p class="text-stone-400 mt-2">Review your luxury choices before dispatching to the kitchen.</p>
+        </div>
+        <a href="{{ url_for('main.menu') }}" class="text-xs font-mono uppercase tracking-wider text-amber-500 hover:underline">← Back to Menu</a>
+    </div>
+
+    <div id="empty-cart-msg" class="p-12 text-center border border-dashed border-stone-800 rounded-xl {% if cart_items %}hidden{% endif %}">
+        <p class="text-stone-500">Your cart is completely vacant.</p>
+        <a href="{{ url_for('main.menu') }}" class="inline-block mt-4 px-6 py-2.5 bg-amber-500 text-stone-950 font-bold rounded-lg text-sm transition hover:bg-amber-400">Browse Menu</a>
+    </div>
+
+    {% if cart_items %}
+    <div id="cart-content" class="space-y-4">
+        {% for item in cart_items %}
+        <div id="item-row-{{ item.model.id }}" class="p-4 bg-stone-950 border border-stone-800 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+                <h3 class="font-bold text-stone-200 text-lg">{{ item.model.name }}</h3>
+                <p class="text-xs text-stone-500 mt-0.5">Rate: ${{ "%.2f"|format(item.model.price / 100) }} each</p>
+            </div>
+            
+            <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-8">
+                <div class="flex items-center bg-stone-900 border border-stone-800 rounded-lg p-1">
+                    <button onclick="updateQuantity('decrease', '{{ item.model.id }}')" class="px-2.5 py-1 text-stone-400 hover:text-amber-500 font-mono font-bold text-sm transition cursor-pointer">
+                        −
+                    </button>
+                    
+                    <span id="qty-text-{{ item.model.id }}" class="px-3 font-mono font-bold text-sm text-stone-200">
+                        {{ item.quantity }}
+                    </span>
+                    
+                    <button onclick="updateQuantity('add', '{{ item.model.id }}')" class="px-2.5 py-1 text-stone-400 hover:text-amber-500 font-mono font-bold text-sm transition cursor-pointer">
+                        +
+                    </button>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <span id="subtotal-text-{{ item.model.id }}" class="font-mono font-bold text-stone-100 text-base min-w-[70px] text-right">
+                        ${{ "%.2f"|format(item.subtotal / 100) }}
+                    </span>
+                    
+                    <button onclick="updateQuantity('remove', '{{ item.model.id }}')" class="p-2 text-stone-600 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition cursor-pointer">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        
+        <div class="p-6 bg-stone-900 border border-stone-800 rounded-xl flex justify-between items-center mt-8">
+            <div>
+                <span class="text-xs uppercase tracking-widest font-mono text-stone-500">Estimated Total</span>
+                <div id="grand-total-text" class="text-3xl font-mono font-bold text-amber-500 mt-1">${{ "%.2f"|format(total / 100) }}</div>
+            </div>
+            <a href="{{ url_for('cart.checkout') }}" class="block text-center px-6 py-3 bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold uppercase tracking-wider text-sm rounded-lg shadow-lg shadow-amber-500/10 transition text-decoration-none">
+                Proceed to Checkout
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function updateQuantity(action, itemId) {
+    let url = `/cart/add/${itemId}`;
+    if (action === 'decrease') url = `/cart/decrease/${itemId}`;
+    if (action === 'remove') url = `/cart/remove/${itemId}`;
+
+    fetch(url, { method: 'POST' })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // If item was deleted completely or dropped to 0 quantity, slide its row out of existence
+            if (data.removed) {
+                const row = document.getElementById(`item-row-${itemId}`);
+                if (row) row.remove();
+                
+                // If everything is deleted, swap the view to show empty cart banner
+                if (data.cart_empty || !document.querySelectorAll('[id^="item-row-"]').length) {
+                    document.getElementById('cart-content').classList.add('hidden');
+                    document.getElementById('empty-cart-msg').classList.remove('hidden');
+                }
+            } else {
+                // Otherwise, just overwrite the values instantly on the screen
+                document.getElementById(`qty-text-${itemId}`).innerText = data.quantity;
+                document.getElementById(`subtotal-text-${itemId}`).innerText = `$${data.subtotal}`;
+            }
+            
+            // Always update the overarching summary price badge
+            document.getElementById('grand-total-text').innerText = `$${data.grand_total}`;
+        }
+    })
+    .catch(error => console.error('Error modifying checkout values:', error));
+}
+</script>
+{% endblock %}

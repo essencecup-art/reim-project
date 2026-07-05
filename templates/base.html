@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}LuxeEats{% endblock %}</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-stone-900 text-stone-100 min-h-screen font-sans">
+
+<nav class="border-b border-stone-800 bg-stone-950/50 backdrop-blur-md sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+        <a href="/" class="text-xl font-bold tracking-widest text-amber-500 uppercase">LuxeEats</a>
+        
+        <div class="flex items-center gap-6 text-sm tracking-wide font-medium text-stone-400">
+            <a href="{{ url_for('main.menu') }}" class="hover:text-amber-400 transition">Menu</a>
+            
+            {# 🌟 Dynamic Check: Changes layout globally based on session authentication #}
+            {% if session.get('user') %}
+                <div class="flex items-center gap-3">
+                    <span class="text-amber-500 font-mono text-xs bg-amber-500/10 px-2 py-1 rounded border border-amber-500/20">
+                        Hi, {{ session['user']['name'].split()[0] }}
+                    </span>
+                    <a href="{{ url_for('auth.logout') }}" class="hover:text-red-400 text-xs text-stone-500 transition">Logout</a>
+                </div>
+            {% else %}
+                <a href="{{ url_for('auth.login') }}" class="text-stone-300 hover:text-amber-500 transition">Sign In</a>
+            {% endif %}
+        </div>
+    </div>
+</nav>
+    <main class="max-w-6xl mx-auto px-6 py-12">
+        {% block content %}
+        {% endblock %}
+    </main>
+
+</body>
+</html>

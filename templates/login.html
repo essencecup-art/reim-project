@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block title %}Sign In | LuxeEats{% endblock %}
+
+{% block content %}
+<div class="min-h-[70vh] flex items-center justify-center">
+    <div class="w-full max-w-md p-8 bg-stone-900 border border-stone-800 rounded-2xl shadow-xl space-y-8 text-center">
+        
+        <div class="space-y-2">
+            <h1 class="text-2xl font-extrabold tracking-tight text-stone-100 font-mono uppercase text-amber-500">LuxeEats</h1>
+            <h2 class="text-xl font-bold text-stone-200">Welcome back to your table</h2>
+            <p class="text-xs text-stone-400">Secure verification via your enterprise account.</p>
+        </div>
+
+        <hr class="border-stone-800" />
+
+        <div class="flex justify-center py-4">
+            <script src="https://accounts.google.com/gsi/client" async defer></script>
+            
+            <div id="g_id_onload"
+                 data-client_id='{{ client_id }}'
+                 data-context="signin"
+                 data-ux_mode="redirect"
+                 data-login_uri="http://localhost:5000/auth/callback"
+                 data-auto_prompt="false">
+            </div>
+
+            <div class="g_id_signin"
+                 data-type="standard"
+                 data-shape="pill"
+                 data-theme="dark"
+                 data-text="continue_with"
+                 data-size="large"
+                 data-logo_alignment="left">
+            </div>
+        </div>
+
+        <hr class="border-stone-800" />
+        
+        <p class="text-[10px] font-mono text-stone-500 tracking-wider uppercase">
+            Protected by Google Identity Services
+        </p>
+    </div>
+</div>
+{% endblock %}

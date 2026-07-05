@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block title %}Settlement | LuxeEats{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto space-y-8">
+    <div class="border-b border-stone-800 pb-4">
+        <h1 class="text-3xl font-extrabold tracking-tight text-stone-100">Select Settlement</h1>
+        <p class="text-stone-400 text-sm mt-1">Choose how you wish to settle your table account.</p>
+    </div>
+
+    <div class="p-6 bg-stone-900 border border-stone-800 rounded-xl flex justify-between items-center">
+        <span class="text-xs uppercase tracking-widest font-mono text-stone-400">Total Outstanding</span>
+        <span class="text-2xl font-mono font-bold text-amber-500">${{ "%.2f"|format(total / 100) }}</span>
+    </div>
+
+<form action="{{ url_for('cart.submit_order') }}" method="POST" class="space-y-6">
+    
+    <div>
+        <label class="text-xs uppercase tracking-widest font-mono text-stone-400 block mb-2">Fulfillment Method</label>
+        <select name="fulfillment_method" id="fulfillment-select" class="w-full bg-stone-900 border border-stone-800 rounded-lg p-3 text-stone-100 font-mono focus:outline-none focus:border-amber-500" onchange="toggleTableInput()">
+            <option value="Dine-In">Dine-In (Eat at Restaurant)</option>
+            <option value="Takeaway">Takeaway (Pick Up)</option>
+            <option value="Delivery">Home Delivery</option>
+        </select>
+    </div>
+
+    <div id="table-number-container">
+        <label class="text-xs uppercase tracking-widest font-mono text-stone-400 block mb-2">Table Number</label>
+        <input type="text" name="table_number" id="table_number" placeholder="e.g. 04" class="w-full bg-stone-900 border border-stone-800 rounded-lg p-3 text-stone-100 font-mono focus:outline-none focus:border-amber-500">
+    </div>
+
+    <div>
+        <label class="text-xs uppercase tracking-widest font-mono text-stone-400 block mb-2">Payment Method</label>
+        <select name="payment_method" class="w-full bg-stone-900 border border-stone-800 rounded-lg p-3 text-stone-100 font-mono focus:outline-none focus:border-amber-500">
+            <option value="Cash">Pay with Cash</option>
+            <option value="VietQR">Scan VietQR</option>
+            <option value="Stripe">Credit Card (Stripe)</option>
+        </select>
+    </div>
+
+    <button type="submit" class="w-full bg-amber-500 text-stone-950 font-bold tracking-wide uppercase py-4 rounded-xl hover:bg-amber-400 transition shadow-lg shadow-amber-500/10">
+        Place Order & Generate Ticket
+    </button>
+</form>
+
+    <div class="text-center pt-4">
+        <a href="{{ url_for('cart.show_cart') }}" class="text-xs font-mono uppercase tracking-wider text-stone-500 hover:text-stone-400">← Return to Selection</a>
+    </div>
+</div>
+
+<script>
+function toggleTableInput() {
+    const fulfillment = document.getElementById('fulfillment-select').value;
+    const container = document.getElementById('table-number-container');
+    const input = document.getElementById('table_number');
+    
+    if (fulfillment === 'Delivery' || fulfillment === 'Takeaway') {
+        // Hide the table input input smoothly
+        container.style.display = 'none';
+        // Auto-assign the value so the Python backend receives it
+        input.value = fulfillment; 
+    } else {
+        // Show it if they are eating at the restaurant
+        container.style.display = 'block';
+        input.value = ''; // Reset it so they can type table "04"
+    }
+}
+
+// Run it once on page load just in case the browser cached an old selection
+document.addEventListener('DOMContentLoaded', toggleTableInput);
+</script>
+{% endblock %}

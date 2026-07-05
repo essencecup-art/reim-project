@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block title %}Order Confirmed | LuxeEats{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto text-center space-y-8 py-12">
+    
+    <div class="inline-flex items-center justify-center h-16 w-16 rounded-full bg-emerald-500/10 text-emerald-500 mx-auto border border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.2)] animate-bounce">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+    </div>
+
+    <div class="space-y-2">
+        <h1 class="text-3xl font-extrabold tracking-tight text-stone-100">Sent to Kitchen</h1>
+        <p class="text-stone-400 text-sm">Your luxury dining experience has been recorded successfully.</p>
+    </div>
+
+    <div class="p-6 bg-stone-900 border border-stone-800 rounded-xl space-y-3 font-mono text-xs text-left shadow-xl">
+        <div class="flex justify-between items-center">
+            <span class="text-stone-500 uppercase tracking-widest">Receipt No:</span>
+            <span class="text-amber-500 font-bold text-sm">#{{ order_id }}</span>
+        </div>
+        <div class="flex justify-between items-center border-t border-stone-800/60 pt-3">
+            <span class="text-stone-500 uppercase tracking-widest">Settlement:</span>
+            <span class="text-stone-200 uppercase font-bold">{{ method }}</span>
+        </div>
+        <div class="flex justify-between items-center border-t border-stone-800/60 pt-3">
+            <span class="text-stone-500 uppercase tracking-widest">Total Charged:</span>
+            <span class="text-stone-100 font-bold text-base">${{ "%.2f"|format(total / 100) }}</span>
+        </div>
+    </div>
+
+    <p class="text-xs text-stone-500 italic max-w-xs mx-auto">
+        {% if method == 'Cash' %}
+            Please remain seated. A server will stop by your table shortly to handle your cash currency verification.
+        {% else %}
+            Payment verified. Our chefs are preparing your order right now.
+        {% endif %}
+    </p>
+
+    <div class="pt-6 space-y-3">
+        <a href="{{ url_for('main.menu') }}" class="block w-full py-3.5 bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold uppercase tracking-wider text-sm rounded-lg transition duration-150">
+            Order More Items
+        </a>
+        <a href="{{ url_for('main.home') }}" class="block w-full py-3 bg-stone-950 border border-stone-800 hover:border-amber-500/30 text-stone-400 hover:text-amber-500 font-mono text-xs uppercase tracking-wider rounded-lg transition">
+            Return to Home
+        </a>
+    </div>
+</div>
+{% endblock %}

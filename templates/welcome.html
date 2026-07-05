@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}Welcome | LuxeEats{% endblock %}
+
+{% block content %}
+
+<div class="min-h-[80vh] flex flex-col justify-between max-w-2xl mx-auto py-12 px-4">
+    <div class="text-center space-y-2">
+        <span class="text-xs uppercase tracking-[0.3em] font-mono text-amber-500/80 font-bold">Premium Dining Experience</span>
+        <h1 class="text-5xl font-black tracking-tighter text-stone-100 font-serif">LuxeEats</h1>
+        <div class="w-12 h-[2px] bg-amber-500 mx-auto mt-4 rounded-full"></div>
+    </div>
+
+    <div class="bg-stone-900 border border-stone-800/80 p-8 rounded-2xl shadow-2xl space-y-6 text-center my-auto">
+        <div class="space-y-2">
+            <h2 class="text-xl font-bold text-stone-200">Welcome to Your Table</h2>
+            <p class="text-stone-400 text-sm max-w-sm mx-auto leading-relaxed">
+                Scan, order, and settle your account directly from your device. Experiencing fine dining at your fingertips.
+            </p>
+        </div>
+
+        <div class="pt-4">
+            <a href="{{ url_for('main.menu') }}" class="inline-block w-full bg-amber-500 text-stone-950 font-mono font-bold tracking-widest uppercase py-4 px-8 rounded-xl hover:bg-amber-400 transition shadow-lg shadow-amber-500/10 hover:scale-[1.01] transform duration-150">
+                ✨ Explore Menu & Order
+            </a>
+        </div>
+    </div>
+
+    <div class="text-center space-y-4">
+        <p class="text-xs font-mono text-stone-600">&copy; 2026 LuxeEats Ecosystem. All rights reserved.</p>
+        
+        <div class="pt-2 border-t border-stone-900">
+            {% if session.get('user') %}
+                <div class="flex items-center justify-center space-x-3 text-xs font-mono text-stone-400">
+                    <span>Logged in as <strong class="text-amber-500">{{ session['user']['name'] }}</strong></span>
+                    {% if session['user']['is_admin'] %}
+                        <span class="bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">Admin</span>
+                    {% endif %}
+                    <a href="{{ url_for('auth.logout') }}" class="text-stone-500 hover:text-red-400 underline ml-2">Logout</a>
+                </div>
+            {% else %}
+                <a href="{{ url_for('auth.login') }}" class="inline-flex items-center space-x-1 text-xs font-mono tracking-wider text-stone-600 hover:text-stone-400 transition duration-150">
+                    <span>Staff & Management Portal</span>
+                    <span class="text-[10px]">→</span>
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
