@@ -3,39 +3,118 @@
 {% block title %}Our Menu | LuxeEats{% endblock %}
 
 {% block content %}
-<div class="absolute top-20 right-6 z-40">
-    <a href="{{ url_for('cart.show_cart') }}" class="px-4 py-2 bg-stone-900 border border-stone-800 hover:border-amber-500/30 rounded-lg text-xs font-mono uppercase tracking-wider text-amber-500 flex items-center gap-2 transition-all duration-300 shadow-md">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+<div class="fixed bottom-6 right-6 z-50 md:absolute md:top-20 md:right-6 md:bottom-auto">
+    <a href="{{ url_for('cart.show_cart') }}" class="px-5 py-3 md:py-2 bg-amber-500 hover:bg-amber-400 text-stone-950 rounded-xl md:rounded-lg text-xs font-mono uppercase tracking-widest flex items-center gap-2 transition-all duration-300 shadow-xl shadow-amber-500/10 font-bold hover:scale-105 active:scale-95">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
         </svg>
-        View Order
+        <span>View Order</span>
     </a>
 </div>
 
-<div class="space-y-8">
-    <div class="grid md:grid-cols-2 gap-6">
-        {% for item in menu_items %}
-        <div class="p-6 bg-stone-950 border border-stone-800 rounded-xl flex flex-col justify-between transition hover:border-amber-500/50 group">
-            <div class="flex justify-between items-start gap-4">
-                <div>
-                    <span class="text-[10px] uppercase tracking-widest font-mono text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full">{{ item.category }}</span>
-                    <h3 class="text-lg font-bold text-stone-100 group-hover:text-amber-400 transition mt-2">{{ item.name }}</h3>
-                    <p class="text-sm text-stone-400 mt-1 pr-4">{{ item.description }}</p>
-                </div>
-                <span class="text-xl font-mono font-bold text-stone-200">${{ "%.2f"|format(item.price / 100) }}</span>
-            </div>
-            
-            <div class="mt-6 pt-4 border-t border-stone-900 flex justify-end relative">
-                <button 
-                    onclick="addToCart('{{ item.id }}', this)"
-                    class="relative px-4 py-2 bg-stone-900 border border-stone-800 rounded-lg text-xs font-semibold uppercase tracking-wider text-stone-300 hover:bg-stone-800 hover:text-amber-400 transition-all duration-300 cursor-pointer overflow-visible">
+<div class="space-y-10 max-w-7xl mx-auto px-2">
+    
+    {% if featured_item %}
+    <div class="relative overflow-hidden bg-gradient-to-br from-stone-900 to-stone-950 border border-stone-800/80 rounded-3xl p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-8 shadow-2xl" data-aos="fade-down">
+        <div class="absolute -top-24 -left-24 w-72 h-72 bg-amber-500/5 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-24 -right-24 w-72 h-72 bg-red-500/5 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div class="space-y-4 max-w-xl z-10 text-center md:text-left">
+            <span class="text-[10px] uppercase tracking-[0.3em] font-mono font-bold text-red-500 bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20">Chef's Signature Selection</span>
+            <h1 class="text-4xl md:text-5xl font-serif font-bold tracking-tight text-stone-100 italic">{{ featured_item.name }}</h1>
+            <p class="text-stone-400 text-sm font-light leading-relaxed">
+                {{ featured_item.description or 'Exquisite premium house creation compiled by our master culinary artisans.' }}
+            </p>
+            <div class="pt-2 flex flex-col sm:flex-row items-center justify-center md:justify-start gap-4">
+                <span class="text-2xl font-mono font-black text-amber-400">${{ "%.2f"|format(featured_item.price / 100) }}</span>
+                <button onclick="addToCart('{{ featured_item.id }}', this)" class="w-full sm:w-auto px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-mono text-xs font-bold uppercase tracking-widest rounded-xl transition-all duration-300 cursor-pointer1">
                     Add to Order
                 </button>
             </div>
         </div>
+        
+        <div class="relative w-64 h-64 md:w-80 md:h-80 flex items-center justify-center bg-stone-900/60 rounded-2xl border border-stone-800 overflow-hidden group">
+            <div class="absolute inset-0 bg-radial from-transparent to-stone-950/80 pointer-events-none z-10"></div>
+            <span class="text-stone-600 font-mono text-xs uppercase tracking-widest z-0 group-hover:text-stone-500 transition-colors">Premium Dish Preview</span>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="sticky top-16 z-40 bg-stone-900/80 backdrop-blur-md py-3 border-b border-stone-800/40">
+        <div class="flex items-center gap-3 overflow-x-auto no-scrollbar whitespace-nowrap px-1 Mask-Left-Right">
+            
+            <a href="{{ url_for('main.menu') }}" 
+               class="px-5 py-2.5 rounded-full text-xs font-mono font-medium tracking-wider transition-all duration-300 border
+               {% if selected_category == 'All' %}
+                   bg-red-600 text-white border-red-500 shadow-lg shadow-red-600/20
+               {% else %}
+                   bg-stone-950 text-stone-400 border-stone-800 hover:border-stone-700 hover:text-stone-200
+               {% endif %}">
+                All Collections
+            </a>
+
+            {% for cat in categories %}
+            <a href="{{ url_for('main.menu', category=cat) }}" 
+               class="px-5 py-2.5 rounded-full text-xs font-mono font-medium tracking-wider transition-all duration-300 border capitalize
+               {% if cat == selected_category %}
+                   bg-red-600 text-white border-red-500 shadow-lg shadow-red-600/20
+               {% else %}
+                   bg-stone-950 text-stone-400 border-stone-800 hover:border-stone-700 hover:text-stone-200
+               {% endif %}">
+                {{ cat }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" data-aos="fade-up">
+        {% for item in menu_items %}
+        <div class="bg-gradient-to-b from-stone-950 to-stone-900/40 border border-stone-800/70 rounded-2xl flex flex-col overflow-hidden transition-all duration-500 hover:border-amber-500/30 hover:shadow-2xl hover:shadow-amber-500/5 group h-full">
+            
+            <div class="h-48 bg-stone-900/80 border-b border-stone-900 flex items-center justify-center relative overflow-hidden">
+                <div class="absolute top-3 left-3 z-10">
+                    <span class="text-[9px] uppercase tracking-widest font-mono text-amber-400 bg-stone-950/90 border border-amber-500/20 px-2.5 py-1 rounded-md backdrop-blur-sm font-semibold">
+                        {{ item.category }}
+                    </span>
+                </div>
+                <span class="text-[10px] font-mono text-stone-700 uppercase tracking-wider group-hover:scale-105 transition-transform duration-500">Awaiting Plate Imagery</span>
+            </div>
+
+            <div class="p-5 flex flex-col justify-between flex-grow space-y-4">
+                <div class="space-y-1">
+                    <h3 class="text-base font-serif font-bold text-stone-100 group-hover:text-amber-400 transition-colors duration-300 line-clamp-1">
+                        {{ item.name }}
+                    </h3>
+                    <p class="text-xs text-stone-400 font-light leading-relaxed line-clamp-2 min-h-[2rem]">
+                        {{ item.description or 'No formulation breakdown provided for this exquisite plate.' }}
+                    </p>
+                </div>
+                
+                <div class="pt-3 border-t border-stone-900/60 flex items-center justify-between relative mt-auto">
+                    <span class="text-base font-mono font-bold text-stone-200">
+                        ${{ "%.2f"|format(item.price / 100) }}
+                    </span>
+                    
+                    <button 
+                        onclick="addToCart('{{ item.id }}', this)"
+                        class="relative px-3.5 py-2 bg-stone-950 border border-stone-800 rounded-lg text-[10px] font-mono font-bold uppercase tracking-widest text-stone-400 hover:bg-stone-900 hover:text-amber-400 hover:border-amber-500/20 transition-all duration-300 cursor-pointer overflow-visible">
+                        Add to Order
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-span-full py-16 text-center space-y-3 bg-stone-950/40 border border-dashed border-stone-800 rounded-2xl">
+            <p class="text-stone-500 font-mono text-sm tracking-wide">No exquisite selections currently populated under this category.</p>
+        </div>
         {% endfor %}
     </div>
 </div>
+
+<style>
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+</style>
 
 <script>
 function addToCart(itemId, buttonElement) {
@@ -46,35 +125,30 @@ function addToCart(itemId, buttonElement) {
     .then(response => response.json())
     .then(data => {
         if(data.success) {
-            // ─── CREATE A FLOATING +1 BUBBLE ───────────────────────
+            // ─── FLOATING +1 BUBBLE ───
             const badge = document.createElement('span');
             badge.innerText = '+1';
-            
-            // Tailwind classes to style it as an absolute-positioned floating element
-            badge.className = "absolute -top-3 -right-2 text-xs font-mono font-bold text-amber-500 transition-all duration-500 ease-out transform translate-y-1 opacity-0 pointer-events-none";
-            // Append the badge right into the button's parent container
+            badge.className = "absolute -top-3 -right-2 text-xs font-mono font-bold text-amber-400 transition-all duration-500 ease-out transform translate-y-1 opacity-0 pointer-events-none";
             buttonElement.appendChild(badge);
             
-            // Trigger the animation frame (Fly up and fade in)
             requestAnimationFrame(() => {
-                badge.classList.remove('translate-y-1', 'opacity-0'); // ◄── Fixed: remove translate-y-1
-                badge.classList.add('-translate-y-4', 'opacity-100');
+                badge.classList.remove('translate-y-1', 'opacity-0');
+                badge.classList.add('-translate-y-5', 'opacity-100');
             });
             
-            // After half a second, fade it out and erase it from the browser memory
             setTimeout(() => {
                 badge.classList.remove('opacity-100');
                 badge.classList.add('opacity-0');
                 setTimeout(() => badge.remove(), 500);
             }, 600);
             
-            // ─── SMOOTH BUTTON FLASH FEEDBACK ──────────────────────
-            buttonElement.classList.remove('border-stone-800', 'text-stone-300');
-            buttonElement.classList.add('border-amber-500/50', 'text-amber-400');
+            // ─── SMOOTH BUTTON FLASH FEEDBACK ───
+            buttonElement.classList.remove('border-stone-800', 'text-stone-400');
+            buttonElement.classList.add('border-amber-500/40', 'text-amber-400', 'bg-amber-500/5');
             
             setTimeout(() => {
-                buttonElement.classList.remove('border-amber-500/50', 'text-amber-400');
-                buttonElement.classList.add('border-stone-800', 'text-stone-300');
+                buttonElement.classList.remove('border-amber-500/40', 'text-amber-400', 'bg-amber-500/5');
+                buttonElement.classList.add('border-stone-800', 'text-stone-400');
             }, 800);
         }
     })
