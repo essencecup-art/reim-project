@@ -10,7 +10,7 @@
 
 <nav class="border-b border-stone-800 bg-stone-950/50 backdrop-blur-md sticky top-0 z-50">
     <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-        <a href="/" class="text-xl font-bold tracking-widest text-amber-500 uppercase">LuxeEats</a>
+        <a href="{{ url_for('main.home') }}" class="text-xl font-bold tracking-widest text-amber-500 uppercase">LuxeEats</a>
         
         <div class="flex items-center gap-6 text-sm tracking-wide font-medium text-stone-400">
             <a href="{{ url_for('main.menu') }}" class="hover:text-amber-400 transition">Menu</a>
