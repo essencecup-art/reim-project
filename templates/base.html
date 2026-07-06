@@ -4,35 +4,96 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}LuxeEats{% endblock %}</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:ital,wght@0,700;1,400&display=swap" rel="stylesheet">
+    
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    
+    <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .font-serif { font-family: 'Playfair Display', serif; }
+        
+        @keyframes loading {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(200%); }
+        }
+    </style>
+
+    <script>
+        if (!sessionStorage.getItem('animated')) {
+            document.documentElement.classList.add('overflow-hidden'); // Lock scroll while loading
+            window.addEventListener('DOMContentLoaded', () => {
+                const loader = document.getElementById('preloader');
+                if (loader) {
+                    loader.classList.remove('invisible', 'opacity-0');
+                    setTimeout(() => {
+                        loader.classList.add('opacity-0');
+                        document.documentElement.classList.remove('overflow-hidden');
+                        setTimeout(() => loader.remove(), 700);
+                        sessionStorage.setItem('animated', 'true');
+                    }, 1200);
+                }
+            });
+        }
+    </script>
 </head>
 <body class="bg-stone-900 text-stone-100 min-h-screen font-sans">
 
-<nav class="border-b border-stone-800 bg-stone-950/50 backdrop-blur-md sticky top-0 z-50">
-    <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-        <a href="{{ url_for('main.home') }}" class="text-xl font-bold tracking-widest text-amber-500 uppercase">LuxeEats</a>
-        
-        <div class="flex items-center gap-6 text-sm tracking-wide font-medium text-stone-400">
-            <a href="{{ url_for('main.menu') }}" class="hover:text-amber-400 transition">Menu</a>
-            
-            {# 🌟 Dynamic Check: Changes layout globally based on session authentication #}
-            {% if session.get('user') %}
-                <div class="flex items-center gap-3">
-                    <span class="text-amber-500 font-mono text-xs bg-amber-500/10 px-2 py-1 rounded border border-amber-500/20">
-                        Hi, {{ session['user']['name'].split()[0] }}
-                    </span>
-                    <a href="{{ url_for('auth.logout') }}" class="hover:text-red-400 text-xs text-stone-500 transition">Logout</a>
+    <script>
+        if (sessionStorage.getItem('animated')) {
+            // If already animated, hide it immediately before it renders visually
+            document.write('<div id="preloader" class="hidden"></div>');
+        } else {
+            document.write(`
+                <div id="preloader" class="fixed inset-0 bg-stone-950 z-[9999] flex flex-col items-center justify-center transition-all duration-700 ease-in-out">
+                    <div class="text-center space-y-4">
+                        <h1 class="text-4xl font-serif font-bold tracking-widest text-amber-500 uppercase animate-pulse">LuxeEats</h1>
+                        <div class="w-16 h-[1px] bg-stone-800 mx-auto relative overflow-hidden">
+                            <div class="absolute inset-y-0 left-0 w-1/2 bg-amber-500 animate-[loading_1.5s_infinite_ease-in-out]"></div>
+                        </div>
+                    </div>
                 </div>
-            {% else %}
-                <a href="{{ url_for('auth.login') }}" class="text-stone-300 hover:text-amber-500 transition">Sign In</a>
-            {% endif %}
+            `);
+        }
+    </script>
+
+    <nav class="border-b border-stone-800 bg-stone-950/50 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+            <a href="{{ url_for('main.home') }}" class="text-xl font-bold tracking-widest text-amber-500 uppercase">LuxeEats</a>
+            
+            <div class="flex items-center gap-6 text-sm tracking-wide font-medium text-stone-400">
+                <a href="{{ url_for('main.menu') }}" class="hover:text-amber-400 transition">Menu</a>
+                
+                {% if session.get('user') %}
+                    <div class="flex items-center gap-3">
+                        <span class="text-amber-500 font-mono text-xs bg-amber-500/10 px-2 py-1 rounded border border-amber-500/20">
+                            Hi, {{ session['user']['name'].split()[0] }}
+                        </span>
+                        <a href="{{ url_for('auth.logout') }}" class="hover:text-red-400 text-xs text-stone-500 transition">Logout</a>
+                    </div>
+                {% else %}
+                    <a href="{{ url_for('auth.login') }}" class="text-stone-300 hover:text-amber-500 transition">Sign In</a>
+                {% endif %}
+            </div>
         </div>
-    </div>
-</nav>
+    </nav>
+
     <main class="max-w-6xl mx-auto px-6 py-12">
         {% block content %}
         {% endblock %}
     </main>
 
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+    <script>
+        AOS.init({
+            duration: 800,
+            once: true,
+            delay: 50,
+        });
+    </script>
 </body>
 </html>

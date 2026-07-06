@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, session, redirect, url_for
+from flask import Blueprint, render_template, request, session, redirect, url_for
 
 from core.extensions import db
 from core.models import MenuItem
@@ -12,9 +12,30 @@ def home():
 
 @main_bp.route('/menu')
 def menu():
-    items = MenuItem.query.filter_by(is_available=True).all()
+    # 1. Grab the selected category parameter from the URL bar (default to 'All')
+    selected_category = request.args.get('category', 'All')
+    
+    # 2. Get the unique categories directly from your database table
+    query_results = MenuItem.query.with_entities(MenuItem.category).distinct().all()
+    categories = [result.category for result in query_results]
+    
+    # 3. DYNAMIC HERO: Pull the most premium (highest price) available item for the spotlight banner
+    featured_item = MenuItem.query.filter_by(is_available=True).order_by(MenuItem.price.desc()).first()
+    
+    # 4. Filter items based on what the director clicked
+    if selected_category == 'All':
+        items = MenuItem.query.all()
+    else:
+        items = MenuItem.query.filter_by(category=selected_category).all()
 
-    return render_template('menu.html',menu_items= items)
+    # 5. Pass EVERYTHING down dynamically
+    return render_template(
+        'menu.html', 
+        menu_items=items, 
+        categories=categories, 
+        selected_category=selected_category,
+        featured_item=featured_item  # 🌟 Dynamic database item passed here
+    )
 
 
 
