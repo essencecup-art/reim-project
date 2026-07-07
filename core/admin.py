@@ -1,5 +1,4 @@
-import datetime
-
+from datetime import datetime
 from flask import Blueprint, render_template, jsonify, flash, redirect, url_for, session, request
 from core.models import Order, User
 from core.extensions import db
@@ -41,7 +40,7 @@ def dashboard():
     all_orders = Order.query.order_by(Order.updated_at.desc()).all()
     
     # 🗓️ Get the current calendar matrix context
-    now = datetime.utcnow()
+    now = datetime.now()
     current_year = now.year
     current_month = now.month
     
