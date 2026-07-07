@@ -30,12 +30,13 @@ def create_app():
     #     db.create_all()
     from core.cart import cart_bp   
     from core.main import main_bp
-    from core.admin import admin_bp
+    from core.admin import admin_bp, staff_bp
     from core.auth import auth_bp
     from core.payment import payment_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(cart_bp)
+    app.register_blueprint(staff_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(payment_bp)

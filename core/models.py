@@ -47,6 +47,7 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False) # Google emails are unique
     name = db.Column(db.String(100), nullable=True)
     is_admin = db.Column(db.Boolean, default=False) # 🌟 Your is_admin flag! Default is False.
+    is_staff = db.Column(db.Boolean, default=False)
 
     def __repr__(self):
         return f"<User {self.email} - Admin: {self.is_admin}>"

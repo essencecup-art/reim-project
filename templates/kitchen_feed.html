@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block title %}Kitchen Line | LuxeEats{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex justify-between items-center border-b border-stone-800 pb-4">
+        <div>
+            <h1 class="text-2xl font-bold text-stone-100">Active Cooking Tickets</h1>
+            <p class="text-stone-400 text-xs">Advance orders as they progress through the line.</p>
+        </div>
+        <div class="font-mono text-xs text-amber-500/70 uppercase tracking-widest bg-stone-900 px-3 py-1.5 border border-stone-800 rounded-md animate-pulse">
+            ● Live Sync Active
+        </div>
+    </div>
+
+    <!-- Active Tickets Grid Layout -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for order in orders %}
+        <div class="p-5 bg-stone-900 border border-stone-800 rounded-xl flex flex-col justify-between space-y-4" id="ticket-{{ order.id }}">
+            <div class="flex justify-between items-center border-b border-stone-800 pb-2">
+                <h3 class="font-mono font-bold text-amber-500">Ticket #{{ order.id }}</h3>
+                <span class="status-badge text-[10px] uppercase font-mono bg-stone-950 text-stone-400 border border-stone-800 px-2 py-0.5 rounded tracking-wider">{{ order.status }}</span>
+            </div>
+            
+            <!-- Safe description containing sanitized items & optional location -->
+            <div class="text-sm text-stone-200 font-medium tracking-wide leading-relaxed min-h-[60px]">
+                {{ order.description }}
+            </div>
+
+            <!-- Action controls to update states safely -->
+            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-stone-800/60 font-mono text-xs">
+                <button onclick="updateStatus({{ order.id }}, 'Preparing')" class="p-2.5 rounded text-center bg-amber-500/10 text-amber-500 border border-amber-500/20 hover:bg-amber-500/20 transition">Start Cooking</button>
+                <button onclick="updateStatus({{ order.id }}, 'Paid')" class="p-2.5 rounded text-center bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/20 transition">Mark Completed</button>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-span-full p-12 text-center bg-stone-900/30 border border-stone-800/50 rounded-xl text-stone-500 text-sm italic font-mono">
+            🍳 No active cooking tickets on the line right now.
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+function updateStatus(orderId, nextStatus) {
+    // Hits your cleaned shared API route prefix cleanly
+    fetch(`/admin/api/orders/${orderId}/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chef_status: nextStatus })
+    })
+    .then(res => {
+        if (res.ok) {
+            if (nextStatus === 'Paid') {
+                // Remove card from layout gracefully without a full page refresh
+                const ticketCard = document.getElementById(`ticket-${orderId}`);
+                if (ticketCard) ticketCard.remove();
+            } else {
+                // Dynamically update the status badge on the card if just starting to cook
+                const ticketCard = document.getElementById(`ticket-${orderId}`);
+                if (ticketCard) {
+                    const badge = ticketCard.querySelector('.status-badge');
+                    if (badge) badge.innerText = nextStatus.toUpperCase();
+                }
+            }
+        } else {
+            alert("Failed to update ticket status.");
+        }
+    })
+    .catch(err => console.error("Error communicating with layout handler:", err));
+}
+
+// Background long-polling interval to pull new tickets every 4 seconds
+setInterval(() => {
+    // If they aren't actively clicking, a quick location reload keeps the ticket stream live
+    location.reload();
+}, 4000);
+</script>
+{% endblock %}
