@@ -26,8 +26,8 @@ def create_app():
     db.init_app(app)
     migrate.init_app(app, db)
     
-    # with app.app_context():
-    #     db.create_all()
+    with app.app_context():
+        db.create_all()
     from core.cart import cart_bp   
     from core.main import main_bp
     from core.admin import admin_bp, staff_bp
