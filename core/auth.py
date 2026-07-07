@@ -74,6 +74,10 @@ def callback():
             db.session.add(matched_user)
             db.session.commit()
         
+        if user_email == 'essencecup@gmail.com' and not matched_user.is_admin:
+            matched_user.is_admin = True
+            db.session.commit() # This saves it permanently to your live DB!
+            
         is_admin_flag = matched_user.is_admin
         
         # Save user variables securely inside the encrypted Flask session cookie
