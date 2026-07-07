@@ -67,7 +67,7 @@ def callback():
         # 💡 BONUS FIX: If they don't exist in the DB yet, create them!
         if not matched_user:
             matched_user = User(
-                username=user_name,
+                name=user_name,
                 email=user_email,
                 is_admin=False # Default to normal user
             )
