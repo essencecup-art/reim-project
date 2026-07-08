@@ -107,28 +107,41 @@ def handle_settlement():
 @payment_bp.route('/create-checkout-session/<int:order_id>', methods=['GET','POST'])
 def create_checkout_session(order_id):
     order = Order.query.get_or_404(order_id)
-    luxeeats_fee = int(order.total_amount * 0.10) 
+    
+    # 1. Calculate the 7% Happiness Fee based on your cent-based database values
+    happiness_fee = int(order.total_amount * 0.07)
+    
+    # 2. Update the database order total so your records match the real charge
+    order.total_amount += happiness_fee
+    db.session.commit()
     
     try:
+        # 3. Inject both items into Stripe's line_items array
         checkout_session = stripe.checkout.Session.create(
             payment_method_types=['card'],
-            line_items=[{
-                'price_data': {
-                    'currency': 'usd',
-                    'product_data': {
-                        'name': f"LuxeEats Premium Order #{order.id}",
+            line_items=[
+                {
+                    'price_data': {
+                        'currency': 'usd',
+                        'product_data': {
+                            'name': f"LuxeEats Premium Order #{order.id}",
+                        },
+                        'unit_amount': order.total_amount - happiness_fee, # Base items total
                     },
-                    'unit_amount': order.total_amount,
+                    'quantity': 1,
                 },
-                'quantity': 1,
-            }],
+                {
+                    'price_data': {
+                        'currency': 'usd',
+                        'product_data': {
+                            'name': "✨ Happiness Fee (7%)",
+                        },
+                        'unit_amount': happiness_fee, # Your platform cut!
+                    },
+                    'quantity': 1,
+                }
+            ],
             mode='payment',
-            payment_intent_data={
-                'application_fee_amount': luxeeats_fee,
-                'transfer_data': {
-                    'destination': 'acct_12345XYZ', 
-                },
-            },
             metadata={
                 'order_id': str(order.id)
             },
