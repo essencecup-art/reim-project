@@ -92,7 +92,7 @@ def callback():
         
         if is_admin_flag:
             flash(f"Welcome back, Captain {user_name}!", "success")
-            return redirect(url_for('admin.dashboard')) 
+            return redirect(url_for('main.portal')) 
         else:
             flash(f"Logged in as {user_name}.", "success")
             return redirect(url_for('main.menu'))

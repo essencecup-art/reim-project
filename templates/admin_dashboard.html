@@ -161,8 +161,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const orderId = button.getAttribute('data-id');
         const targetStatus = button.getAttribute('data-status');
         
-        // Aligned route to go through your /admin blueprint gate prefix cleanly
-        fetch(`/admin/api/orders/${orderId}/update`, {
+        // Aligned route to go through your /staff blueprint gate prefix cleanly
+        fetch(`/staff/api/orders/${orderId}/update`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

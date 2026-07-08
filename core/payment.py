@@ -42,7 +42,7 @@ def get_active_cart_total_cents():
         item = MenuItem.query.get(int(item_id))
         if item:
             # Assuming item.price is stored as a float/decimal (e.g., 12.50)
-            total_cents += int(item.price * 100) * quantity
+            total_cents += int(item.price) * quantity
             
     return total_cents
 
