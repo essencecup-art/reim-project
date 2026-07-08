@@ -1,31 +1,44 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 
-{% block title %}Portal{% endblock %}
+{% block title %}Workspace Router | LuxeEats{% endblock %}
+
 {% block content %}
-<div class="portal-container" style="text-align: center; margin-top: 50px;">
-        <h1>Kitchen Command Portal</h1>
-        <p>Please select your workspace:</p>
+<div class="max-w-2xl mx-auto my-20 space-y-8 text-center">
+    <div class="space-y-2">
+        <h1 class="text-4xl font-extrabold tracking-tight text-stone-100">LuxeEats Gateway</h1>
+        <p class="text-stone-400 text-sm font-mono">Select your authorized operating environment.</p>
+    </div>
 
-        <div class="options" style="display: flex; justify-content: center; gap: 20px; margin-top: 30px;">
-            
-            <!-- Kitchen Portal: Visible for both Staff and Admin -->
-            {% if user.is_staff or user.is_admin %}
-                <a href="{{ url_for('admin.dashboard') }}" class="btn-kitchen">
-                    Kitchen Dashboard
-                </a>
-            {% endif %}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
+        <!-- Kitchen Portal Button: Visible for both Staff and Admin -->
+        {% if user.is_staff or user.is_admin %}
+        <a href="{{ url_for('staff.kitchen_feed') }}" class="p-8 bg-stone-900 border border-stone-800 rounded-xl hover:border-amber-500/40 transition duration-200 group text-left flex flex-col justify-between space-y-4">
+            <div>
+                <span class="text-[10px] uppercase tracking-widest font-mono text-amber-500 block">Operations</span>
+                <h2 class="text-xl font-bold text-stone-200 mt-1 group-hover:text-amber-400 transition">Kitchen Line</h2>
+                <p class="text-xs text-stone-400 mt-2 leading-relaxed">Monitor active live cooking tickets, advance order fulfillment status, and manage the line.</p>
+            </div>
+            <span class="text-xs font-mono text-stone-500 group-hover:text-stone-300 transition">Enter Line &rarr;</span>
+        </a>
+        {% endif %}
 
-            <!-- Management Portal: Visible only for Admin -->
-            {% if user.is_admin %}
-                <a href="{{ url_for('staff.kitchen_feed') }}" class="btn-management">
-                    Management Portal
-                </a>
-            {% endif %}
-        </div>
-        
-        <div style="margin-top: 40px;">
-            <a href="{{ url_for('auth.logout') }}">Logout</a>
-        </div>
+        <!-- Management Portal Button: Visible only for Admin -->
+        {% if user.is_admin %}
+        <a href="{{ url_for('admin.dashboard') }}" class="p-8 bg-stone-900 border border-stone-800 rounded-xl hover:border-emerald-500/40 transition duration-200 group text-left flex flex-col justify-between space-y-4">
+            <div>
+                <span class="text-[10px] uppercase tracking-widest font-mono text-emerald-500 block">Administration</span>
+                <h2 class="text-xl font-bold text-stone-200 mt-1 group-hover:text-emerald-400 transition">Control Panel</h2>
+                <p class="text-xs text-stone-400 mt-2 leading-relaxed">Review financial metrics, track gross monthly revenue ledger streams, and access full management tools.</p>
+            </div>
+            <span class="text-xs font-mono text-stone-500 group-hover:text-stone-300 transition">Enter HQ &rarr;</span>
+        </a>
+        {% endif %}
+    </div>
+
+    <div class="pt-6 font-mono text-xs">
+        <a href="{{ url_for('auth.logout') }}" class="text-stone-500 hover:text-rose-400 transition">
+            Terminate Session (Logout)
+        </a>
+    </div>
 </div>
-
 {% endblock %}
