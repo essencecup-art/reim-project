@@ -80,12 +80,18 @@
         <p class="text-[10px] font-mono text-stone-600">&copy; 2026 LuxeEats Ecosystem. All rights reserved.</p>
         
         <div class="flex items-center gap-4">
+            <!-- Fixed Session Processing Logic Block -->
             {% if session.get('user') %}
                 <div class="flex items-center space-x-3 text-xs font-mono text-stone-400">
                     <span>Logged in as <strong class="text-amber-500 font-bold">{{ session['user']['name'] }}</strong></span>
-                    {% if session['user']['is_admin'] %}
-                        <span class="bg-amber-500/10 text-amber-500 border border-amber-500/20 px-2 py-0.5 rounded text-[9px] uppercase font-bold tracking-wider">Admin</span>
+                    
+                    <!-- Check both admin and staff conditions inside your cookie storage -->
+                    {% if session['user'].get('is_admin') or session['user'].get('is_staff') %}
+                        <a href="{{ url_for('main.portal') }}" class="bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-400/30 px-2 py-1 rounded text-[10px] uppercase font-bold tracking-wider transition-all duration-200">
+                            💼 Enter Portal
+                        </a>
                     {% endif %}
+                    
                     <a href="{{ url_for('auth.logout') }}" class="text-stone-500 hover:text-red-400 underline transition duration-150 ml-1">Logout</a>
                 </div>
             {% else %}
