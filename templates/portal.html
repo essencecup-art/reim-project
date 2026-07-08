@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Portal{% endblock %}
+{% block content %}
+<div class="portal-container" style="text-align: center; margin-top: 50px;">
+        <h1>Kitchen Command Portal</h1>
+        <p>Please select your workspace:</p>
+
+        <div class="options" style="display: flex; justify-content: center; gap: 20px; margin-top: 30px;">
+            
+            <!-- Kitchen Portal: Visible for both Staff and Admin -->
+            {% if user.is_staff or user.is_admin %}
+                <a href="{{ url_for('admin.dashboard') }}" class="btn-kitchen">
+                    Kitchen Dashboard
+                </a>
+            {% endif %}
+
+            <!-- Management Portal: Visible only for Admin -->
+            {% if user.is_admin %}
+                <a href="{{ url_for('staff.kitchen_feed') }}" class="btn-management">
+                    Management Portal
+                </a>
+            {% endif %}
+        </div>
+        
+        <div style="margin-top: 40px;">
+            <a href="{{ url_for('auth.logout') }}">Logout</a>
+        </div>
+</div>
+
+{% endblock %}

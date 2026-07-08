@@ -79,13 +79,15 @@ def callback():
             db.session.commit() # This saves it permanently to your live DB!
             
         is_admin_flag = matched_user.is_admin
+        is_staff_flag = matched_user.is_staff
         
         # Save user variables securely inside the encrypted Flask session cookie
         session['user'] = {
             'email': user_email,
             'name': user_name,
             'picture': user_info.get('picture'),
-            'is_admin': is_admin_flag 
+            'is_admin': is_admin_flag ,
+            'is_staff': is_staff_flag
         }
         
         if is_admin_flag:

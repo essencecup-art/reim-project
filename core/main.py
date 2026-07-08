@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, session, redirect, url_for
 
 from core.extensions import db
-from core.models import MenuItem
+from core.models import MenuItem, User
 
 main_bp = Blueprint('main', __name__)
 
@@ -37,6 +37,15 @@ def menu():
         featured_item=featured_item  # 🌟 Dynamic database item passed here
     )
 
+@main_bp.route('/portal')
+def portal():
+    # 1. Check if the Google user session exists
+    user = session.get('user')
+    if not user:
+        return redirect(url_for('auth.login')) 
+    
+    # 2. Pass the session dictionary straight to the template
+    return render_template('portal.html', user=user)
 
 
 

@@ -44,7 +44,7 @@
 <script>
 function updateStatus(orderId, nextStatus) {
     // Hits your cleaned shared API route prefix cleanly
-    fetch(`/admin/api/orders/${orderId}/update`, {
+    fetch(`/staff/api/orders/${orderId}/update`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chef_status: nextStatus })
