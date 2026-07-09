@@ -13,13 +13,21 @@
         </div>
     </div>
 
-    <!-- Active Tickets Grid Layout (Added id="tickets-grid" here) -->
+    <!-- Active Tickets Grid Layout -->
     <div id="tickets-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {% for order in orders %}
         <div class="p-5 bg-stone-900 border border-stone-800 rounded-xl flex flex-col justify-between space-y-4" id="ticket-{{ order.id }}">
             <div class="flex justify-between items-center border-b border-stone-800 pb-2">
-                <h3 class="font-mono font-bold text-amber-500">Ticket #{{ order.id }}</h3>
-                <span class="status-badge text-[10px] uppercase font-mono bg-stone-950 text-stone-400 border border-stone-800 px-2 py-0.5 rounded tracking-wider">{{ order.status }}</span>
+                <div class="flex flex-col">
+                    <h3 class="font-mono font-bold text-amber-500">Ticket #{{ order.id }}</h3>
+                    <!-- 🛠️ ADDED: Table metadata tracking for the cooking line -->
+                    <span class="text-[11px] font-mono text-stone-400 mt-0.5">Table: {{ order.table_number if order.table_number else "00" }}</span>
+                </div>
+                <div class="flex flex-col items-end space-y-1">
+                    <span class="status-badge text-[10px] uppercase font-mono bg-stone-950 text-stone-400 border border-stone-800 px-2 py-0.5 rounded tracking-wider">{{ order.status }}</span>
+                    <!-- 🛠️ ADDED: Order placement timestamp tracking -->
+                    <span class="text-[10px] font-mono text-stone-500">{{ order.created_at.strftime('%I:%M %p') }}</span>
+                </div>
             </div>
             
             <!-- Safe description containing sanitized items & optional location -->
@@ -30,7 +38,7 @@
             <!-- Action controls to update states safely -->
             <div class="grid grid-cols-2 gap-2 pt-2 border-t border-stone-800/60 font-mono text-xs">
                 <button onclick="updateStatus({{ order.id }}, 'Preparing')" class="p-2.5 rounded text-center bg-amber-500/10 text-amber-500 border border-amber-500/20 hover:bg-amber-500/20 transition">Start Cooking</button>
-                <button onclick="updateStatus({{ order.id }}, 'Paid')" class="p-2.5 rounded text-center bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/20 transition">Mark Completed</button>
+                <button onclick="updateStatus({{ order.id }}, 'Completed')" class="p-2.5 rounded text-center bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/20 transition">Mark Completed</button>
             </div>
         </div>
         {% else %}
@@ -51,12 +59,10 @@ function updateStatus(orderId, nextStatus) {
     })
     .then(res => {
         if (res.ok) {
-            if (nextStatus === 'Paid') {
-                // Remove card from layout gracefully without a full page refresh
+            if (nextStatus === 'Completed') {
                 const ticketCard = document.getElementById(`ticket-${orderId}`);
                 if (ticketCard) ticketCard.remove();
             } else {
-                // Dynamically update the status badge on the card if just starting to cook
                 const ticketCard = document.getElementById(`ticket-${orderId}`);
                 if (ticketCard) {
                     const badge = ticketCard.querySelector('.status-badge');
@@ -73,12 +79,10 @@ function updateStatus(orderId, nextStatus) {
 // 2. Smoothly polls the database for new incoming orders every 4 seconds without flashing the browser screen
 async function updateKitchenStream() {
     try {
-        // Hits your shared staff blueprint data pipeline
         const response = await fetch('/staff/api/orders/stream');
         const data = await response.json();
         
         const gridContainer = document.getElementById('tickets-grid');
-        gridContainer.innerHTML = ''; 
         
         // Handle empty kitchen state
         if (!data.orders || data.orders.length === 0) {
@@ -89,15 +93,21 @@ async function updateKitchenStream() {
             return;
         }
         
-        // Re-render only active tickets ('Pending' or 'Preparing')
+        gridContainer.innerHTML = ''; 
+        
+        // Re-render active operational tickets with synchronized layout metadata
         data.orders.forEach(order => {
-            if (order.status === 'Paid' || order.status === 'Cancelled') return;
-
             const cardHTML = `
                 <div class="p-5 bg-stone-900 border border-stone-800 rounded-xl flex flex-col justify-between space-y-4" id="ticket-${order.id}">
                     <div class="flex justify-between items-center border-b border-stone-800 pb-2">
-                        <h3 class="font-mono font-bold text-amber-500">Ticket #${order.id}</h3>
-                        <span class="status-badge text-[10px] uppercase font-mono bg-stone-950 text-stone-400 border border-stone-800 px-2 py-0.5 rounded tracking-wider">${order.status}</span>
+                        <div class="flex flex-col">
+                            <h3 class="font-mono font-bold text-amber-500">Ticket #${order.id}</h3>
+                            <span class="text-[11px] font-mono text-stone-400 mt-0.5">Table: ${order.table}</span>
+                        </div>
+                        <div class="flex flex-col items-end space-y-1">
+                            <span class="status-badge text-[10px] uppercase font-mono bg-stone-950 text-stone-400 border border-stone-800 px-2 py-0.5 rounded tracking-wider">${order.status}</span>
+                            <span class="text-[10px] font-mono text-stone-500">${order.time}</span>
+                        </div>
                     </div>
                     
                     <div class="text-sm text-stone-200 font-medium tracking-wide leading-relaxed min-h-[60px]">
@@ -106,7 +116,7 @@ async function updateKitchenStream() {
 
                     <div class="grid grid-cols-2 gap-2 pt-2 border-t border-stone-800/60 font-mono text-xs">
                         <button onclick="updateStatus(${order.id}, 'Preparing')" class="p-2.5 rounded text-center bg-amber-500/10 text-amber-500 border border-amber-500/20 hover:bg-amber-500/20 transition">Start Cooking</button>
-                        <button onclick="updateStatus(${order.id}, 'Paid')" class="p-2.5 rounded text-center bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/20 transition">Mark Completed</button>
+                        <button onclick="updateStatus(${order.id}, 'Completed')" class="p-2.5 rounded text-center bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/20 transition">Mark Completed</button>
                     </div>
                 </div>
             `;

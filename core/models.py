@@ -18,18 +18,18 @@ class Order(db.Model):
     __tablename__ = 'orders'
     
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # Hooked to Google Login ID or session
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True, index = True)  # Hooked to Google Login ID or session
     total_amount = db.Column(db.Integer, nullable=False)
     payment_method = db.Column(db.String(20), nullable=False)  # 'stripe' or 'cash'
-    status = db.Column(db.String(20), default='Pending')  # Pending, Paid, Completed
-    created_at = db.Column(db.DateTime, default=datetime.now)
+    status = db.Column(db.String(20), default='Pending', index=True)  # Pending, Paid, Completed
+    created_at = db.Column(db.DateTime, default=datetime.now, index = True)
     description = db.Column(db.Text, nullable=True)
     table_number = db.Column(db.String(10), nullable=True)  # Optional for dine-in orders
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
-    user = db.relationship('User', backref=db.backref('orders', lazy=True))
+    user = db.relationship('User', backref=db.backref('orders', lazy= 'joined'))
     
     # Establish a relationship link to the individual items inside this order
-    items = db.relationship('OrderItem', backref='order', lazy=True)
+    items = db.relationship('OrderItem', backref=db.backref('order', lazy="joined"))
 
 class OrderItem(db.Model):
     """The individual breakdown rows inside a single Order receipt"""

@@ -3,6 +3,8 @@ from flask import Blueprint, render_template, jsonify, flash, redirect, url_for,
 from core.models import Order, User
 from core.extensions import db
 from functools import wraps
+from sqlalchemy import func
+from sqlalchemy.orm import joinedload, selectinload
 
 # Split into separate blueprint contexts
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
@@ -37,59 +39,43 @@ def staff_required(f):
 @admin_required
 def dashboard():
     """Purely financial and high-level tracking for the owner."""
-    all_orders = Order.query.order_by(Order.updated_at.desc()).all()
+    all_orders = Order.query.options(selectinload(Order.items)).order_by(Order.created_at.desc()).all()
     
-    # 🗓️ Get the current calendar matrix context
     now = datetime.now()
     current_year = now.year
     current_month = now.month
     
-    # 💰 Calculate All-Time Gross Sales (excluding cancellations)
-    gross_revenue = sum(order.total_amount for order in all_orders if order.status != 'Cancelled')
+    gross_revenue = db.session.query(func.sum(Order.total_amount)).filter(Order.status != 'Cancelled').scalar() or 0
     
-    # 📉 NEW: Calculate Auto-Resetting Monthly Sales 
-    monthly_revenue = sum(
-        order.total_amount 
-        for order in all_orders 
-        if order.status != 'Cancelled'
-        and order.created_at.year == current_year
-        and order.created_at.month == current_month
-    )
-    
-    pending_count = sum(1 for order in all_orders if order.status not in ['Cancelled', 'Paid'])
-    
+    monthly_revenue = db.session.query(func.sum(Order.total_amount)).filter(
+        Order.status != 'Cancelled',
+        Order.created_at.year == current_year,
+        Order.created_at.month == current_month
+    ).scalar() or 0
+
+    pending_count = db.session.query(func.count(Order.id)).filter(
+        Order.status.notin_(['Cancelled', 'Completed'])
+    ).scalar() or 0
+
     return render_template(
         'admin_dashboard.html', 
         orders=all_orders,
         revenue=gross_revenue,
-        monthly_revenue=monthly_revenue,  # 👈 Pass this cleanly to your template parameters
+        monthly_revenue=monthly_revenue,
         pending=pending_count,
         total_orders_count=len(all_orders)
     )
 
 
-# =====================================================================
-# 🍳 KITCHEN LINE ENVIRONMENT (staff_bp)
-# =====================================================================
-
-@staff_bp.route('/kitchen')
-@staff_required
-def kitchen_feed():
-    """Operational ticket monitor view for the cooking crew (No financial data)."""
-    # Pull only cooking tickets that need fulfillment
-    active_tickets = Order.query.filter(Order.status.notin_(['Cancelled', 'Paid'])).order_by(Order.created_at.asc()).all()
-    return render_template('kitchen_feed.html', orders=active_tickets)
-
-
-# =====================================================================
-# 📡 CLEANED SHARED API PIPELINE
-# =====================================================================
-
 @admin_bp.route('/api/orders/stream')
 @admin_required
 def orders_stream():
-    """API endpoint providing the live background polling data stream."""
-    orders = Order.query.order_by(Order.status.desc(), Order.created_at.desc()).all()
+    """API endpoint providing the live background polling data stream for admins."""
+    orders = Order.query.order_by(Order.created_at.desc()).all()
+    
+    now = datetime.now()
+    current_year = now.year
+    current_month = now.month
     
     orders_data = []
     for o in orders:
@@ -103,11 +89,86 @@ def orders_stream():
             'time': o.created_at.strftime('%I:%M %p')
         })
         
+    # Calculate live counters so frontend JavaScript can dynamically re-render metrics cards
+    gross_revenue_calc = db.session.query(func.sum(Order.total_amount)).filter(Order.status != 'Cancelled').scalar() or 0
+    monthly_revenue_calc = db.session.query(func.sum(Order.total_amount)).filter(
+        Order.status != 'Cancelled',
+        Order.created_at.year == current_year,
+        Order.created_at.month == current_month
+    ).scalar() or 0
+    pending_calc = db.session.query(func.count(Order.id)).filter(
+        Order.status.notin_(['Cancelled', 'Completed'])
+    ).scalar() or 0
+
     return jsonify({
         'orders': orders_data,
-        'revenue': f"${sum(o.total_amount for o in orders) / 100:.2f}",
-        'pending': sum(1 for o in orders if o.status not in ['Cancelled', 'Paid'])
+        'revenue': f"${gross_revenue_calc:.2f}",
+        'monthly_revenue': f"${monthly_revenue_calc:.2f}",
+        'pending': pending_calc,
+        'total_orders_count': len(orders)
     })
+
+@admin_bp.route('/api/orders/<int:order_id>/update', methods=['POST'])
+@admin_required
+def admin_update_order_status(order_id):
+    """Dedicated admin pathway to shift order states directly from the command center."""
+    data = request.json
+    if not data or 'chef_status' not in data:
+        return jsonify({'error': 'Invalid payload data.'}), 400
+    chef_status = data.get('chef_status')
+
+    order = Order.query.filter_by(id=order_id).with_for_update().first()
+    if not order:
+        return jsonify({'error': 'Order resource not found.'}), 404
+        
+    # 🌟 GUARD: Protect finalized transactions from layout mismatch states
+    if order.status in ['Cancelled', 'Completed'] and chef_status not in ['Cancelled', 'Completed']:
+        return jsonify({'error': 'Cannot alter a finalized, closed transaction.'}), 400
+        
+    order.status = chef_status
+    db.session.commit()
+
+    return jsonify({'message': f'Admin updated order {order_id} to {chef_status}.'}), 200
+
+# =====================================================================
+# 🍳 KITCHEN LINE ENVIRONMENT (staff_bp)
+# =====================================================================
+
+@staff_bp.route('/kitchen')
+@staff_required
+def kitchen_feed():
+    """Operational ticket monitor view for the cooking crew (No financial data)."""
+    # Only pull tickets that are Paid (from Stripe), Preparing (cooking), or Pending Cash
+    active_tickets = Order.query.filter(
+        Order.status.in_(['Paid', 'Preparing', 'Pending Cash Payment'])
+    ).order_by(Order.created_at.asc()).all()
+    return render_template('kitchen_feed.html', orders=active_tickets)
+
+
+@staff_bp.route('/api/orders/stream')
+@staff_required
+def kitchen_stream():
+    """Live background data stream built specifically for the kitchen line."""
+    tickets = Order.query.filter(
+        Order.status.in_(['Paid', 'Preparing', 'Pending Cash Payment'])
+    ).order_by(Order.created_at.asc()).all()
+    
+    tickets_data = []
+    for t in tickets:
+        tickets_data.append({
+            'id': t.id,
+            'table': t.table_number if t.table_number else "00",
+            'description': t.description,
+            'status': t.status,
+            'time': t.created_at.strftime('%I:%M %p')
+        })
+        
+    return jsonify({'orders': tickets_data})
+
+
+# =====================================================================
+# 📡 CLEANED SHARED API PIPELINE
+# =====================================================================
 
 @staff_bp.route('/api/orders/<int:order_id>/update', methods=['POST'])
 @staff_required
@@ -118,12 +179,13 @@ def update_order_status(order_id):
         return jsonify({'error': 'Invalid payload data.'}), 400
     chef_status = data.get('chef_status')
 
-    order = Order.query.with_for_update().get(order_id)
+    order = Order.query.filter_by(id=order_id).with_for_update().first()
     if not order:
         return jsonify({'error': 'Order resource not found.'}), 404
     
-    if order.status in ['Cancelled', 'Paid'] and chef_status not in ['Cancelled', 'Paid']:
-        return jsonify({'error': 'Cannot alter a closed transaction.'}), 400
+    # Allows 'Paid' or 'Preparing' orders to safely transition to 'Preparing' and 'Completed'
+    if order.status in ['Cancelled', 'Completed'] and chef_status not in ['Cancelled', 'Completed']:
+        return jsonify({'error': 'Cannot alter a finalized, closed transaction.'}), 400
         
     order.status = chef_status
     db.session.commit()

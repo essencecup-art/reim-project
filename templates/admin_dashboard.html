@@ -14,6 +14,33 @@
         </div>
     </div>
 
+    <!-- Live Metrics Counter Row -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Card 1: Monthly Gross Revenue -->
+        <div class="p-6 bg-stone-900 border border-amber-500/20 rounded-xl space-y-2">
+            <span class="text-[10px] uppercase tracking-widest font-mono text-amber-500 block">Monthly Gross Sales</span>
+            <span id="metric-monthly-revenue" class="text-3xl font-mono font-bold text-amber-500">${{ "%.2f"|format(monthly_revenue / 100) }}</span>
+        </div>
+
+        <!-- Card 2: Total Gross Sales (All Time) -->
+        <div class="p-6 bg-stone-900 border border-stone-800 rounded-xl space-y-2">
+            <span class="text-[10px] uppercase tracking-widest font-mono text-stone-500 block">Total Gross Sales (All Time)</span>
+            <span id="metric-gross-revenue" class="text-3xl font-mono font-bold text-stone-100">${{ "%.2f"|format(revenue / 100) }}</span>
+        </div>
+
+        <!-- Card 3: Active Tickets -->
+        <div class="p-6 bg-stone-900 border border-stone-800 rounded-xl space-y-2">
+            <span class="text-[10px] uppercase tracking-widest font-mono text-stone-500 block">Active Kitchen Tickets</span>
+            <span id="metric-pending-count" class="text-3xl font-mono font-bold text-stone-100">{{ pending }}</span>
+        </div>
+
+        <!-- Card 4: Total Orders Processed -->
+        <div class="p-6 bg-stone-900 border border-stone-800 rounded-xl space-y-2">
+            <span class="text-[10px] uppercase tracking-widest font-mono text-stone-500 block">Total Orders Processed</span>
+            <span id="metric-total-count" class="text-3xl font-mono font-bold text-stone-100">{{ total_orders_count }}</span>
+        </div>
+    </div>
+
     <div class="admin-dashboard-content bg-stone-900/40 p-6 border border-stone-800/80 rounded-xl space-y-4">
         <h2 class="text-xs uppercase tracking-widest font-mono text-stone-400">Live Kitchen Dashboard Feed</h2>
         
@@ -22,7 +49,10 @@
             <div class="order-card p-5 bg-stone-900 border border-stone-800 rounded-xl space-y-4 flex flex-col justify-between" id="order-card-{{ order.id }}">
                 <div class="card-header flex justify-between items-center border-b border-stone-800 pb-2">
                     <h3 class="text-sm font-mono font-bold text-stone-200">Order #{{ order.id }}</h3>
-                    <span class="status-badge text-[10px] uppercase font-mono font-bold px-2 py-0.5 rounded bg-stone-950 border border-stone-800 tracking-wider text-amber-400">{{ order.status }}</span>
+                    <span class="status-badge text-[10px] uppercase font-mono font-bold px-2 py-0.5 rounded tracking-wider bg-stone-950 border border-stone-800
+                        {% if order.status == 'Paid' %}text-blue-400{% elif order.status == 'Preparing' %}text-amber-400{% elif order.status == 'Completed' %}text-emerald-400{% else %}text-rose-400{% endif %}">
+                        {{ order.status }}
+                    </span>
                 </div>
                 
                 <div class="card-body text-xs space-y-1 text-stone-400">
@@ -31,38 +61,13 @@
                 </div>
                 
                 <div class="action-buttons grid grid-cols-3 gap-2 pt-2 border-t border-stone-800/60 text-[10px] font-mono">
-                    <button class="btn p-2 rounded text-center bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border border-amber-500/20 transition duration-150" data-id="{{ order.id }}" data-status="preparing">Cook</button>
-                    <button class="btn p-2 rounded text-center bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border border-emerald-500/20 transition duration-150" data-id="{{ order.id }}" data-status="paid">Paid</button>
-                    <button class="btn p-2 rounded text-center bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 border border-rose-500/20 transition duration-150" data-id="{{ order.id }}" data-status="cancelled">Cancel</button>
+                    <!-- 🛠️ FIXED: Standardized case parameters to match backend transitions safely -->
+                    <button class="btn p-2 rounded text-center bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border border-amber-500/20 transition duration-150" data-id="{{ order.id }}" data-status="Preparing">Cook</button>
+                    <button class="btn p-2 rounded text-center bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border border-emerald-500/20 transition duration-150" data-id="{{ order.id }}" data-status="Completed">Complete</button>
+                    <button class="btn p-2 rounded text-center bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 border border-rose-500/20 transition duration-150" data-id="{{ order.id }}" data-status="Cancelled">Cancel</button>
                 </div>
             </div>
             {% endfor %}
-        </div>
-    </div>
-
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"> <!-- Changed cols to 4 -->
-        <!-- Card 1: Monthly Gross Revenue -->
-        <div class="p-6 bg-stone-900 border border-amber-500/20 rounded-xl space-y-2">
-            <span class="text-[10px] uppercase tracking-widest font-mono text-amber-500 block">Monthly Gross Sales</span>
-            <span class="text-3xl font-mono font-bold text-amber-500">${{ "%.2f"|format(monthly_revenue / 100) }}</span>
-        </div>
-
-        <!-- Card 2: Total Gross Sales (All Time) -->
-        <div class="p-6 bg-stone-900 border border-stone-800 rounded-xl space-y-2">
-            <span class="text-[10px] uppercase tracking-widest font-mono text-stone-500 block">Total Gross Sales (All Time)</span>
-            <span class="text-3xl font-mono font-bold text-stone-100">${{ "%.2f"|format(revenue / 100) }}</span>
-        </div>
-
-        <!-- Card 3: Active Tickets -->
-        <div class="p-6 bg-stone-900 border border-stone-800 rounded-xl space-y-2">
-            <span class="text-[10px] uppercase tracking-widest font-mono text-stone-500 block">Active Kitchen Tickets</span>
-            <span class="text-3xl font-mono font-bold text-stone-100">{{ pending }}</span>
-        </div>
-
-        <!-- Card 4: Total Orders Processed -->
-        <div class="p-6 bg-stone-900 border border-stone-800 rounded-xl space-y-2">
-            <span class="text-[10px] uppercase tracking-widest font-mono text-stone-500 block">Total Orders Processed</span>
-            <span class="text-3xl font-mono font-bold text-stone-100">{{ total_orders_count }}</span>
         </div>
     </div>
 
@@ -72,14 +77,15 @@
     
     <div id="order-stream-container" class="space-y-3">
         {% for order in orders %}
-        <div class="p-5 bg-stone-900 border {% if order.status == 'Pending' %}border-amber-500/30{% else %}border-stone-800{% endif %} rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4 transition hover:border-stone-700">
+        <div class="p-5 bg-stone-900 border {% if order.status in ['Paid', 'Preparing'] %}border-amber-500/20{% else %}border-stone-800{% endif %} rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4 transition hover:border-stone-700">
             <div class="space-y-1 max-w-xl">
                 <div class="flex items-center gap-3">
                     <span class="text-sm font-mono font-bold text-amber-500 bg-stone-950 px-2 py-0.5 border border-stone-800 rounded">
                         Table {{ order.table_number if order.table_number else "00" }}
                     </span>
                     <span class="text-[10px] font-mono text-stone-500">{{ order.created_at.strftime('%I:%M %p') }}</span>
-                    <span class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded font-mono font-bold {% if order.status == 'Pending' %}bg-amber-500/10 text-amber-500{% else %}bg-emerald-500/10 text-emerald-500{% endif %}">
+                    <span class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded font-mono font-bold 
+                        {% if order.status == 'Paid' %}bg-blue-500/10 text-blue-400{% elif order.status == 'Preparing' %}bg-amber-500/10 text-amber-500{% elif order.status == 'Completed' %}bg-emerald-500/10 text-emerald-500{% else %}bg-rose-500/10 text-rose-500{% endif %}">
                         {{ order.status }}
                     </span>
                 </div>
@@ -107,17 +113,34 @@ async function updateDashboardStream() {
         const response = await fetch('/admin/api/orders/stream');
         const data = await response.json();
         
+        // 🛠️ ADDED: Dynamically push the structural math summary counters into view seamlessly
+        document.getElementById('metric-monthly-revenue').innerText = data.monthly_revenue;
+        document.getElementById('metric-gross-revenue').innerText = data.revenue;
+        document.getElementById('metric-pending-count').innerText = data.pending;
+        document.getElementById('metric-total-count').innerText = data.total_orders_count;
+        
         const container = document.getElementById('order-stream-container');
         container.innerHTML = ''; 
         
-        if (data.orders.length === 0) {
+        if (!data.orders || data.orders.length === 0) {
             container.innerHTML = `<div class="p-12 text-center bg-stone-900/30 border border-stone-800/50 rounded-xl text-stone-500 text-sm italic font-mono">No transactions recorded yet.</div>`;
             return;
         }
         
         data.orders.forEach(order => {
-            const statusClass = order.status === 'Pending' ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500';
-            const borderClass = order.status === 'Pending' ? 'border-amber-500/30' : 'border-stone-800';
+            // Setup flexible dynamic formatting assignments based on the structured operational status pipeline
+            let statusClass = 'bg-rose-500/10 text-rose-500';
+            let borderClass = 'border-stone-800';
+            
+            if (order.status === 'Paid') {
+                statusClass = 'bg-blue-500/10 text-blue-400';
+                borderClass = 'border-amber-500/20';
+            } else if (order.status === 'Preparing') {
+                statusClass = 'bg-amber-500/10 text-amber-500';
+                borderClass = 'border-amber-500/20';
+            } else if (order.status === 'Completed') {
+                statusClass = 'bg-emerald-500/10 text-emerald-500';
+            }
             
             const cardHTML = `
                 <div class="p-5 bg-stone-900 border ${borderClass} rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4 transition hover:border-stone-700">
@@ -156,13 +179,12 @@ setInterval(updateDashboardStream, 3000);
 document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('click', function(event) {
         const button = event.target.closest('.btn');
-        if (!button) return; // Ignore clicks that aren't on our actions
+        if (!button) return; 
         
         const orderId = button.getAttribute('data-id');
         const targetStatus = button.getAttribute('data-status');
         
-        // Aligned route to go through your /staff blueprint gate prefix cleanly
-        fetch(`/staff/api/orders/${orderId}/update`, {
+        fetch(`/admin/api/orders/${orderId}/update`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -174,15 +196,21 @@ document.addEventListener('DOMContentLoaded', () => {
             return response.json().then(err => { throw new Error(err.error); });
         })
         .then(data => {
-            // Target selector updated to catch your .status-badge structural node!
             const card = document.getElementById(`order-card-${orderId}`);
             if (card) {
                 const badge = card.querySelector('.status-badge');
                 if (badge) {
                     badge.innerText = targetStatus.toUpperCase();
+                    
+                    // Reset badge text color rules dynamically to stay completely consistent
+                    badge.className = "status-badge text-[10px] uppercase font-mono font-bold px-2 py-0.5 rounded tracking-wider bg-stone-950 border border-stone-800";
+                    if (targetStatus === 'Paid') badge.classList.add('text-blue-400');
+                    else if (targetStatus === 'Preparing') badge.classList.add('text-amber-400');
+                    else if (targetStatus === 'Completed') badge.classList.add('text-emerald-400');
+                    else badge.classList.add('text-rose-400');
                 }
             }
-            // Trigger background stream sync instantly so the whole board refreshes together
+            // Trigger stream sync instantly so macro summary figures adjust immediately
             updateDashboardStream();
         })
         .catch(error => {
