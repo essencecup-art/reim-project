@@ -31,10 +31,33 @@
             <input type="text" name="table_number" id="table_number" placeholder="e.g. 04" class="w-full bg-stone-900 border border-stone-800 rounded-lg p-3 text-stone-100 font-mono focus:outline-none focus:border-amber-500">
         </div>
 
-        <!-- Dynamic Delivery Address Room -->
-        <div id="delivery-address-container" class="hidden">
-            <label class="text-xs uppercase tracking-widest font-mono text-stone-400 block mb-2">Delivery Address</label>
-            <textarea name="delivery_address" id="delivery_address" rows="2" placeholder="Enter your full drop-off address..." class="w-full bg-stone-900 border border-stone-800 rounded-lg p-3 text-stone-100 font-mono focus:outline-none focus:border-amber-500"></textarea>
+        <!-- ==========================================
+            1. THE HTML FORM SECTION
+            Drop this right where your delivery address goes
+            ========================================== -->
+        <div id="delivery-address-container" class="space-y-4 my-6">
+            <label class="text-xs uppercase tracking-widest font-mono text-stone-400 block">
+                Delivery Location
+            </label>
+            
+            <!-- This is the visible text box that auto-fills with the GPS address -->
+            <input type="text" 
+                id="delivery_address" 
+                name="delivery_address" 
+                placeholder="Waiting for GPS or typing address..." 
+                class="w-full bg-stone-900 border border-stone-800 rounded-lg p-3 text-stone-100 font-mono focus:outline-none focus:border-amber-500">
+            
+            <!-- This is the dark-themed visual map box -->
+            <div id="map" class="w-full h-64 bg-stone-950 border border-stone-800 rounded-lg overflow-hidden"></div>
+            
+            <!-- SECRET BACKEND FIELDS: These stay hidden from the user, 
+                but they hold the exact GPS numbers for Uber/DoorDash -->
+            <input type="hidden" name="latitude" id="delivery_lat">
+            <input type="hidden" name="longitude" id="delivery_lng">
+            
+            <p class="text-[10px] font-mono text-stone-500 italic">
+                💡 Tip: If the GPS is slightly off, just drag the map pin to your exact door.
+            </p>
         </div>
 
         <div>
@@ -59,6 +82,117 @@
         <a href="{{ url_for('cart.show_cart') }}" class="text-xs font-mono uppercase tracking-wider text-stone-500 hover:text-stone-400">← Return to Selection</a>
     </div>
 </div>
+
+<!-- ==========================================
+     2. THE GOOGLE MAPS ENGINE
+     Put this at the very bottom of your file.
+     REMEMBER: Replace 'YOUR_GOOGLE_MAPS_API_KEY' with your real key.
+     ========================================== -->
+<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&libraries=places&callback=initDeliveryMap" async defer></script>
+
+<script>
+let map;
+let marker;
+let autocomplete;
+
+// Step 1: Initialize the Map when the page loads
+function initDeliveryMap() {
+    // Default location (Downtown NYC) just in case their phone/browser blocks GPS
+    const fallbackLocation = { lat: 40.7128, lng: -74.0060 };
+
+    // Create the visual map box and style it dark to match LuxeEats
+    map = new google.maps.Map(document.getElementById('map'), {
+        center: fallbackLocation,
+        zoom: 15,
+        disableDefaultUI: true,
+        zoomControl: true,
+        styles: [
+            { "elementType": "geometry", "stylers": [{ "color": "#1c1917" }] },
+            { "elementType": "labels.text.fill", "stylers": [{ "color": "#a8a29e" }] },
+            { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#2e2a24" }] }
+        ]
+    });
+
+    // Drop the red pin onto the map
+    marker = new google.maps.Marker({
+        position: fallbackLocation,
+        map: map,
+        draggable: true // Allows user to adjust it manually
+    });
+
+    // Link the text search bar so Google suggests addresses as they type
+    const input = document.getElementById('delivery_address');
+    autocomplete = new google.maps.places.Autocomplete(input, {
+        fields: ["geometry", "formatted_address"],
+        types: ["address"]
+    });
+
+    // If they click an address suggestion, snap the map and pin to it
+    autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        if (!place.geometry) return;
+
+        const loc = place.geometry.location;
+        map.setCenter(loc);
+        map.setZoom(17);
+        marker.setPosition(loc);
+        
+        // Save the coordinates for the database
+        saveCoordinates(loc.lat(), loc.lng());
+    });
+
+    // If they drag the pin manually, update the form data and find the new address text
+    marker.addListener('dragend', () => {
+        const currentPos = marker.getPosition();
+        saveCoordinates(currentPos.lat(), currentPos.lng());
+        
+        // Ask Google: "What address text matches these new pinpoint coordinates?"
+        const geocoder = new google.maps.Geocoder();
+        geocoder.geocode({ location: currentPos }, (results, status) => {
+            if (status === "OK" && results[0]) {
+                document.getElementById('delivery_address').value = results[0].formatted_address;
+            }
+        });
+    });
+
+    // 🚀 THE AUTOMATIC GPS TRACKER (The Pizza 4P's feature)
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition((position) => {
+            const gpsLocation = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude
+            };
+
+            // 1. Instantly move map and pin to where the user is standing
+            map.setCenter(gpsLocation);
+            map.setZoom(17);
+            marker.setPosition(gpsLocation);
+
+            // 2. Put the numbers into our hidden database inputs
+            saveCoordinates(gpsLocation.lat, gpsLocation.lng);
+
+            // 3. Automatically convert those numbers into a real street address string
+            const geocoder = new google.maps.Geocoder();
+            geocoder.geocode({ location: gpsLocation }, (results, status) => {
+                if (status === "OK" && results[0]) {
+                    document.getElementById('delivery_address').value = results[0].formatted_address;
+                }
+            });
+        }, (error) => {
+            console.log("GPS access denied by user or timed out.");
+        }, {
+            enableHighAccuracy: true, // Forces phone GPS instead of guessing by internet router
+            timeout: 5000
+        });
+    }
+}
+
+// Simple helper function to update the hidden form inputs
+function saveCoordinates(lat, lng) {
+    document.getElementById('delivery_lat').value = lat;
+    document.getElementById('delivery_lng').value = lng;
+}
+</script>
 
 <script>
 function toggleFulfillmentInputs() {

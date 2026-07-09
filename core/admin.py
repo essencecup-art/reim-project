@@ -71,7 +71,7 @@ def dashboard():
 @admin_required
 def orders_stream():
     """API endpoint providing the live background polling data stream for admins."""
-    orders = Order.query.order_by(Order.created_at.desc()).all()
+    orders = Order.query.options(selectinload(Order.items)).order_by(Order.created_at.desc()).all()
     
     now = datetime.now()
     current_year = now.year
@@ -139,7 +139,7 @@ def admin_update_order_status(order_id):
 def kitchen_feed():
     """Operational ticket monitor view for the cooking crew (No financial data)."""
     # Only pull tickets that are Paid (from Stripe), Preparing (cooking), or Pending Cash
-    active_tickets = Order.query.filter(
+    active_tickets = Order.query.options(selectinload(Order.items)).filter(
         Order.status.in_(['Paid', 'Preparing', 'Pending Cash Payment'])
     ).order_by(Order.created_at.asc()).all()
     return render_template('kitchen_feed.html', orders=active_tickets)
@@ -149,7 +149,7 @@ def kitchen_feed():
 @staff_required
 def kitchen_stream():
     """Live background data stream built specifically for the kitchen line."""
-    tickets = Order.query.filter(
+    tickets = Order.query.options(selectinload(Order.items)).filter(
         Order.status.in_(['Paid', 'Preparing', 'Pending Cash Payment'])
     ).order_by(Order.created_at.asc()).all()
     
