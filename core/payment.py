@@ -66,14 +66,16 @@ def handle_settlement():
     fulfillment_method = request.form.get('fulfillment_method')
     payment_method = request.form.get('payment_method')
     
-    # 🔒 SANITIZATION: Escape raw user inputs immediately to prevent XSS/injection injections
-    table_number = html.escape(request.form.get('table_number', '')).strip()[:10]  # Max 10 chars
-    delivery_address = html.escape(request.form.get('delivery_address', '')).strip()[:500]  # Max 500 chars
+    table_number = html.escape(request.form.get('table_number', '')).strip()[:10] 
+    delivery_address = html.escape(request.form.get('delivery_address', '')).strip()[:500] 
+    
+    # 📍 Capture the GPS coordinates sent by your checkout layout map
+    latitude = request.form.get('latitude')
+    longitude = request.form.get('longitude')
     
     current_total = get_active_cart_total_cents() 
     base_description = get_cart_items_description_string() 
     
-    # If a troll enters something stupid, it's safe plain text now
     if fulfillment_method == 'Delivery' and delivery_address:
         final_description = f"📍 DELIVERY TO: {delivery_address} | Items: {base_description}"
     elif fulfillment_method == 'Dine-In' and table_number:
@@ -92,14 +94,11 @@ def handle_settlement():
     db.session.add(new_order)
     db.session.commit()
 
-    # 3. Streamlined Binary Traffic Split
     if payment_method == 'Stripe':
         return redirect(url_for('payment.create_checkout_session', order_id=new_order.id))
-        
-    else: # Cash
+    else: 
         new_order.status = 'Pending Cash Payment'
         db.session.commit()
-        # Fire background socket/event alert to the Staff management screen instantly
         alert_staff_kitchen_terminal(new_order.id)
         return redirect(url_for('cart.order_success', order_id=new_order.id))
 
@@ -108,15 +107,10 @@ def handle_settlement():
 def create_checkout_session(order_id):
     order = Order.query.get_or_404(order_id)
     
-    # 1. Calculate the 7% Happiness Fee based on your cent-based database values
+    # 🔒 Shield against the infinite 7% loop by calculating purely in memory
     happiness_fee = int(order.total_amount * 0.07)
     
-    # 2. Update the database order total so your records match the real charge
-    order.total_amount += happiness_fee
-    db.session.commit()
-    
     try:
-        # 3. Inject both items into Stripe's line_items array
         checkout_session = stripe.checkout.Session.create(
             payment_method_types=['card'],
             line_items=[
@@ -126,7 +120,7 @@ def create_checkout_session(order_id):
                         'product_data': {
                             'name': f"LuxeEats Premium Order #{order.id}",
                         },
-                        'unit_amount': order.total_amount - happiness_fee, # Base items total
+                        'unit_amount': order.total_amount, 
                     },
                     'quantity': 1,
                 },
@@ -136,14 +130,15 @@ def create_checkout_session(order_id):
                         'product_data': {
                             'name': "✨ Happiness Fee (7%)",
                         },
-                        'unit_amount': happiness_fee, # Your platform cut!
+                        'unit_amount': happiness_fee, 
                     },
                     'quantity': 1,
                 }
             ],
             mode='payment',
             metadata={
-                'order_id': str(order.id)
+                'order_id': str(order.id),
+                'happiness_fee_added': str(happiness_fee)
             },
             success_url=url_for('payment.payment_success', order_id=order.id, _external=True),
             cancel_url=url_for('payment.payment_cancel', order_id=order.id, _external=True),
@@ -151,16 +146,6 @@ def create_checkout_session(order_id):
         return redirect(checkout_session.url, code=303)
     except Exception as e:
         return f"Marketplace payment session configuration broken: {str(e)}", 500
-
-
-@payment_bp.route('/payment-success/<int:order_id>')
-def payment_success(order_id):
-    return redirect(url_for('cart.order_success', order_id=order_id))
-
-
-@payment_bp.route('/payment-cancel/<int:order_id>')
-def payment_cancel(order_id):
-    return redirect(url_for('cart.show_cart'))
 
 
 @payment_bp.route('/webhook', methods=['POST'])
@@ -181,12 +166,27 @@ def stripe_webhook():
     if event['type'] == 'checkout.session.completed':
         session_obj = event['data']['object']
         order_id = session_obj.get('metadata', {}).get('order_id')
+        fee_to_add = int(session_obj.get('metadata', {}).get('happiness_fee_added', 0))
         
         if order_id:
             order = Order.query.get(int(order_id))
             if order:
+                # Commit the 7% fee total and flag as Paid simultaneously
+                order.total_amount += fee_to_add
                 order.status = 'Paid'
                 db.session.commit()
-                print(f" Webhook Verified: Order #{order_id} has been marked as PAID.")
+                print(f"✅ Webhook Verified: Order #{order_id} updated with fee and marked as Paid.")
 
     return jsonify({'success': True}), 200
+
+
+@payment_bp.route('/payment-success/<int:order_id>')
+def payment_success(order_id):
+    return redirect(url_for('cart.order_success', order_id=order_id))
+
+
+@payment_bp.route('/payment-cancel/<int:order_id>')
+def payment_cancel(order_id):
+    return redirect(url_for('cart.show_cart'))
+
+

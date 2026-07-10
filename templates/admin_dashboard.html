@@ -61,7 +61,6 @@
                 </div>
                 
                 <div class="action-buttons grid grid-cols-3 gap-2 pt-2 border-t border-stone-800/60 text-[10px] font-mono">
-                    <!-- 🛠️ FIXED: Standardized case parameters to match backend transitions safely -->
                     <button class="btn p-2 rounded text-center bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border border-amber-500/20 transition duration-150" data-id="{{ order.id }}" data-status="Preparing">Cook</button>
                     <button class="btn p-2 rounded text-center bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border border-emerald-500/20 transition duration-150" data-id="{{ order.id }}" data-status="Completed">Complete</button>
                     <button class="btn p-2 rounded text-center bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 border border-rose-500/20 transition duration-150" data-id="{{ order.id }}" data-status="Cancelled">Cancel</button>
@@ -113,22 +112,79 @@ async function updateDashboardStream() {
         const response = await fetch('/admin/api/orders/stream');
         const data = await response.json();
         
-        // 🛠️ ADDED: Dynamically push the structural math summary counters into view seamlessly
+        // Update metric counters
         document.getElementById('metric-monthly-revenue').innerText = data.monthly_revenue;
         document.getElementById('metric-gross-revenue').innerText = data.revenue;
         document.getElementById('metric-pending-count').innerText = data.pending;
         document.getElementById('metric-total-count').innerText = data.total_orders_count;
         
-        const container = document.getElementById('order-stream-container');
-        container.innerHTML = ''; 
+        const gridContainer = document.querySelector('.orders-grid');
+        const streamContainer = document.getElementById('order-stream-container');
         
         if (!data.orders || data.orders.length === 0) {
-            container.innerHTML = `<div class="p-12 text-center bg-stone-900/30 border border-stone-800/50 rounded-xl text-stone-500 text-sm italic font-mono">No transactions recorded yet.</div>`;
+            if (gridContainer) gridContainer.innerHTML = '';
+            streamContainer.innerHTML = `<div class="p-12 text-center bg-stone-900/30 border border-stone-800/50 rounded-xl text-stone-500 text-sm italic font-mono">No transactions recorded yet.</div>`;
             return;
         }
+
+        // --- SECTION 1: RECONCILE ACTIONABLE GRID CARDS ---
+        if (gridContainer) {
+            const incomingIds = data.orders.map(o => o.id);
+            const currentCards = Array.from(gridContainer.querySelectorAll('.order-card'));
+            const currentIds = currentCards.map(card => parseInt(card.id.replace('order-card-', '')));
+
+            // Purge removed order cards
+            currentIds.forEach(id => {
+                if (!incomingIds.includes(id)) {
+                    const cardToRemove = document.getElementById(`order-card-${id}`);
+                    if (cardToRemove) cardToRemove.remove();
+                }
+            });
+
+            // Upsert remaining/new cards
+            data.orders.forEach(order => {
+                const existingCard = document.getElementById(`order-card-${order.id}`);
+                
+                let badgeColor = 'text-rose-400';
+                if (order.status === 'Paid') badgeColor = 'text-blue-400';
+                else if (order.status === 'Preparing') badgeColor = 'text-amber-400';
+                else if (order.status === 'Completed') badgeColor = 'text-emerald-400';
+
+                if (existingCard) {
+                    const badge = existingCard.querySelector('.status-badge');
+                    if (badge && badge.innerText !== order.status.toUpperCase()) {
+                        badge.innerText = order.status.toUpperCase();
+                        badge.className = `status-badge text-[10px] uppercase font-mono font-bold px-2 py-0.5 rounded tracking-wider bg-stone-950 border border-stone-800 ${badgeColor}`;
+                    }
+                    const timeText = existingCard.querySelector('.time-text');
+                    if (timeText) timeText.innerText = order.time;
+                } else {
+                    const cardHTML = `
+                        <div class="order-card p-5 bg-stone-900 border border-stone-800 rounded-xl space-y-4 flex flex-col justify-between" id="order-card-${order.id}">
+                            <div class="card-header flex justify-between items-center border-b border-stone-800 pb-2">
+                                <h3 class="text-sm font-mono font-bold text-stone-200">Order #${order.id}</h3>
+                                <span class="status-badge text-[10px] uppercase font-mono font-bold px-2 py-0.5 rounded tracking-wider bg-stone-950 border border-stone-800 ${badgeColor}">
+                                    ${order.status}
+                                </span>
+                            </div>
+                            <div class="card-body text-xs space-y-1 text-stone-400">
+                                <p>Total Charge: <strong class="text-stone-200">${order.amount}</strong></p>
+                                <p>Updated: <span class="time-text font-mono">${order.time}</span></p>
+                            </div>
+                            <div class="action-buttons grid grid-cols-3 gap-2 pt-2 border-t border-stone-800/60 text-[10px] font-mono">
+                                <button class="btn p-2 rounded text-center bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border border-amber-500/20 transition duration-150" data-id="${order.id}" data-status="Preparing">Cook</button>
+                                <button class="btn p-2 rounded text-center bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border border-emerald-500/20 transition duration-150" data-id="${order.id}" data-status="Completed">Complete</button>
+                                <button class="btn p-2 rounded text-center bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 border border-rose-500/20 transition duration-150" data-id="${order.id}" data-status="Cancelled">Cancel</button>
+                            </div>
+                        </div>`;
+                    gridContainer.insertAdjacentHTML('beforeend', cardHTML);
+                }
+            });
+        }
         
+        // --- SECTION 2: REFRESH LOWER TRANSACTION DISPATCH STREAM ---
+        streamContainer.innerHTML = ''; 
         data.orders.forEach(order => {
-            // Setup flexible dynamic formatting assignments based on the structured operational status pipeline
             let statusClass = 'bg-rose-500/10 text-rose-500';
             let borderClass = 'border-stone-800';
             
@@ -142,7 +198,7 @@ async function updateDashboardStream() {
                 statusClass = 'bg-emerald-500/10 text-emerald-500';
             }
             
-            const cardHTML = `
+            const streamHTML = `
                 <div class="p-5 bg-stone-900 border ${borderClass} rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4 transition hover:border-stone-700">
                     <div class="space-y-1 max-w-xl">
                         <div class="flex items-center gap-3">
@@ -162,9 +218,8 @@ async function updateDashboardStream() {
                             <span class="text-lg font-mono font-bold text-stone-100">${order.amount}</span>
                         </div>
                     </div>
-                </div>
-            `;
-            container.insertAdjacentHTML('beforeend', cardHTML);
+                </div>`;
+            streamContainer.insertAdjacentHTML('beforeend', streamHTML);
         });
         
     } catch (error) {
@@ -186,9 +241,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         fetch(`/admin/api/orders/${orderId}/update`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ chef_status: targetStatus })
         })
         .then(response => {
@@ -201,8 +254,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const badge = card.querySelector('.status-badge');
                 if (badge) {
                     badge.innerText = targetStatus.toUpperCase();
-                    
-                    // Reset badge text color rules dynamically to stay completely consistent
                     badge.className = "status-badge text-[10px] uppercase font-mono font-bold px-2 py-0.5 rounded tracking-wider bg-stone-950 border border-stone-800";
                     if (targetStatus === 'Paid') badge.classList.add('text-blue-400');
                     else if (targetStatus === 'Preparing') badge.classList.add('text-amber-400');
@@ -210,7 +261,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     else badge.classList.add('text-rose-400');
                 }
             }
-            // Trigger stream sync instantly so macro summary figures adjust immediately
             updateDashboardStream();
         })
         .catch(error => {

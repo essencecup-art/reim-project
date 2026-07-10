@@ -20,22 +20,18 @@
             <div class="flex justify-between items-center border-b border-stone-800 pb-2">
                 <div class="flex flex-col">
                     <h3 class="font-mono font-bold text-amber-500">Ticket #{{ order.id }}</h3>
-                    <!-- 🛠️ ADDED: Table metadata tracking for the cooking line -->
                     <span class="text-[11px] font-mono text-stone-400 mt-0.5">Table: {{ order.table_number if order.table_number else "00" }}</span>
                 </div>
                 <div class="flex flex-col items-end space-y-1">
                     <span class="status-badge text-[10px] uppercase font-mono bg-stone-950 text-stone-400 border border-stone-800 px-2 py-0.5 rounded tracking-wider">{{ order.status }}</span>
-                    <!-- 🛠️ ADDED: Order placement timestamp tracking -->
                     <span class="text-[10px] font-mono text-stone-500">{{ order.created_at.strftime('%I:%M %p') }}</span>
                 </div>
             </div>
             
-            <!-- Safe description containing sanitized items & optional location -->
             <div class="text-sm text-stone-200 font-medium tracking-wide leading-relaxed min-h-[60px]">
                 {{ order.description }}
             </div>
 
-            <!-- Action controls to update states safely -->
             <div class="grid grid-cols-2 gap-2 pt-2 border-t border-stone-800/60 font-mono text-xs">
                 <button onclick="updateStatus({{ order.id }}, 'Preparing')" class="p-2.5 rounded text-center bg-amber-500/10 text-amber-500 border border-amber-500/20 hover:bg-amber-500/20 transition">Start Cooking</button>
                 <button onclick="updateStatus({{ order.id }}, 'Completed')" class="p-2.5 rounded text-center bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/20 transition">Mark Completed</button>
@@ -50,7 +46,16 @@
 </div>
 
 <script>
-// 1. Handles advancing or clearing out tickets instantly on click
+function checkEmptyState() {
+    const gridContainer = document.getElementById('tickets-grid');
+    if (gridContainer && gridContainer.querySelectorAll('[id^="ticket-"]').length === 0) {
+        gridContainer.innerHTML = `
+            <div class="col-span-full p-12 text-center bg-stone-900/30 border border-stone-800/50 rounded-xl text-stone-500 text-sm italic font-mono">
+                🍳 No active cooking tickets on the line right now.
+            </div>`;
+    }
+}
+
 function updateStatus(orderId, nextStatus) {
     fetch(`/staff/api/orders/${orderId}/update`, {
         method: 'POST',
@@ -59,12 +64,12 @@ function updateStatus(orderId, nextStatus) {
     })
     .then(res => {
         if (res.ok) {
-            if (nextStatus === 'Completed') {
-                const ticketCard = document.getElementById(`ticket-${orderId}`);
-                if (ticketCard) ticketCard.remove();
-            } else {
-                const ticketCard = document.getElementById(`ticket-${orderId}`);
-                if (ticketCard) {
+            const ticketCard = document.getElementById(`ticket-${orderId}`);
+            if (ticketCard) {
+                if (nextStatus === 'Completed') {
+                    ticketCard.remove();
+                    checkEmptyState();
+                } else {
                     const badge = ticketCard.querySelector('.status-badge');
                     if (badge) badge.innerText = nextStatus.toUpperCase();
                 }
@@ -76,7 +81,6 @@ function updateStatus(orderId, nextStatus) {
     .catch(err => console.error("Error communicating with layout handler:", err));
 }
 
-// 2. Smoothly polls the database for new incoming orders every 4 seconds without flashing the browser screen
 async function updateKitchenStream() {
     try {
         const response = await fetch('/staff/api/orders/stream');
@@ -84,7 +88,6 @@ async function updateKitchenStream() {
         
         const gridContainer = document.getElementById('tickets-grid');
         
-        // Handle empty kitchen state
         if (!data.orders || data.orders.length === 0) {
             gridContainer.innerHTML = `
                 <div class="col-span-full p-12 text-center bg-stone-900/30 border border-stone-800/50 rounded-xl text-stone-500 text-sm italic font-mono">
@@ -92,36 +95,61 @@ async function updateKitchenStream() {
                 </div>`;
             return;
         }
-        
-        gridContainer.innerHTML = ''; 
-        
-        // Re-render active operational tickets with synchronized layout metadata
-        data.orders.forEach(order => {
-            const cardHTML = `
-                <div class="p-5 bg-stone-900 border border-stone-800 rounded-xl flex flex-col justify-between space-y-4" id="ticket-${order.id}">
-                    <div class="flex justify-between items-center border-b border-stone-800 pb-2">
-                        <div class="flex flex-col">
-                            <h3 class="font-mono font-bold text-amber-500">Ticket #${order.id}</h3>
-                            <span class="text-[11px] font-mono text-stone-400 mt-0.5">Table: ${order.table}</span>
-                        </div>
-                        <div class="flex flex-col items-end space-y-1">
-                            <span class="status-badge text-[10px] uppercase font-mono bg-stone-950 text-stone-400 border border-stone-800 px-2 py-0.5 rounded tracking-wider">${order.status}</span>
-                            <span class="text-[10px] font-mono text-stone-500">${order.time}</span>
-                        </div>
-                    </div>
-                    
-                    <div class="text-sm text-stone-200 font-medium tracking-wide leading-relaxed min-h-[60px]">
-                        ${order.description}
-                    </div>
 
-                    <div class="grid grid-cols-2 gap-2 pt-2 border-t border-stone-800/60 font-mono text-xs">
-                        <button onclick="updateStatus(${order.id}, 'Preparing')" class="p-2.5 rounded text-center bg-amber-500/10 text-amber-500 border border-amber-500/20 hover:bg-amber-500/20 transition">Start Cooking</button>
-                        <button onclick="updateStatus(${order.id}, 'Completed')" class="p-2.5 rounded text-center bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/20 transition">Mark Completed</button>
-                    </div>
-                </div>
-            `;
-            gridContainer.insertAdjacentHTML('beforeend', cardHTML);
+        // Drop initial dynamic empty text card if new orders have arrived
+        const emptyStateFallback = gridContainer.querySelector('.col-span-full');
+        if (emptyStateFallback) emptyStateFallback.remove();
+
+        // --- LIVE-DIFF RECONCILIATION ENGINE ---
+        const incomingIds = data.orders.map(o => o.id);
+        const currentCards = Array.from(gridContainer.querySelectorAll('[id^="ticket-"]'));
+        const currentIds = currentCards.map(card => parseInt(card.id.replace('ticket-', '')));
+
+        // 1. Evict processed orders
+        currentIds.forEach(id => {
+            if (!incomingIds.includes(id)) {
+                const el = document.getElementById(`ticket-${id}`);
+                if (el) el.remove();
+            }
         });
+
+        // 2. Upsert modifications or new additions
+        data.orders.forEach(order => {
+            const existingCard = document.getElementById(`ticket-${order.id}`);
+            
+            if (existingCard) {
+                const badge = existingCard.querySelector('.status-badge');
+                if (badge && badge.innerText !== order.status.toUpperCase()) {
+                    badge.innerText = order.status.toUpperCase();
+                }
+            } else {
+                const cardHTML = `
+                    <div class="p-5 bg-stone-900 border border-stone-800 rounded-xl flex flex-col justify-between space-y-4" id="ticket-${order.id}">
+                        <div class="flex justify-between items-center border-b border-stone-800 pb-2">
+                            <div class="flex flex-col">
+                                <h3 class="font-mono font-bold text-amber-500">Ticket #${order.id}</h3>
+                                <span class="text-[11px] font-mono text-stone-400 mt-0.5">Table: ${order.table}</span>
+                            </div>
+                            <div class="flex flex-col items-end space-y-1">
+                                <span class="status-badge text-[10px] uppercase font-mono bg-stone-950 text-stone-400 border border-stone-800 px-2 py-0.5 rounded tracking-wider">${order.status}</span>
+                                <span class="text-[10px] font-mono text-stone-500">${order.time}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="text-sm text-stone-200 font-medium tracking-wide leading-relaxed min-h-[60px]">
+                            ${order.description}
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2 pt-2 border-t border-stone-800/60 font-mono text-xs">
+                            <button onclick="updateStatus(${order.id}, 'Preparing')" class="p-2.5 rounded text-center bg-amber-500/10 text-amber-500 border border-amber-500/20 hover:bg-amber-500/20 transition">Start Cooking</button>
+                            <button onclick="updateStatus(${order.id}, 'Completed')" class="p-2.5 rounded text-center bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/20 transition">Mark Completed</button>
+                        </div>
+                    </div>`;
+                gridContainer.insertAdjacentHTML('beforeend', cardHTML);
+            }
+        });
+
+        checkEmptyState();
         
     } catch (error) {
         console.error("Error refreshing active kitchen streams:", error);
