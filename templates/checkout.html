@@ -88,7 +88,7 @@
      Put this at the very bottom of your file.
      REMEMBER: Replace 'YOUR_GOOGLE_MAPS_API_KEY' with your real key.
      ========================================== -->
-<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&libraries=places&callback=initDeliveryMap" async defer></script>
+<script src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}&libraries=places&callback=initDeliveryMap" async defer></script>
 
 <script>
 let map;
@@ -169,7 +169,7 @@ function initDeliveryMap() {
             marker.setPosition(gpsLocation);
 
             // 2. Put the numbers into our hidden database inputs
-            saveCoordinates(gpsLocation.lat, gpsLocation.lng);
+            saveCoordinates(gpsLocation.lat(), gpsLocation.lng());
 
             // 3. Automatically convert those numbers into a real street address string
             const geocoder = new google.maps.Geocoder();
