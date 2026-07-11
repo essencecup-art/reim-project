@@ -77,15 +77,16 @@ def get_uber_access_token():
 
 def get_delivery_quote_cents(lat, lng):
     token = get_uber_access_token()
+    
+    # FIX: If token fails, just return a fallback fee and print the error.
+    # Do not try to return 'response' because it doesn't exist here.
     if not token:
-        print("DEBUG: Forcing fake delivery fee of $12.50")
-        return 1250
-        #return 99999 # Return a fake, obvious number so you know it failed auth
+        print("DEBUG: Uber Auth Failed - Using fallback fee")
+        return 1250 
 
     api_url = "https://sandbox.api.uber.com/v1/deliveries/quotes" 
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     
-    # Keep using your environment variable address here
     payload = {
         "pickup_address": os.getenv("UBER_PICKUP_ADDRESS", "123 Main St, San Francisco, CA 94105"), 
         "dropoff_location": {"lat": lat, "lng": lng}
@@ -97,15 +98,15 @@ def get_delivery_quote_cents(lat, lng):
         # UNMASKING THE ERROR:
         if response.status_code != 200:
             print(f"🚨 UBER ERROR CODE: {response.status_code}")
-            print(f"🚨 UBER ERROR RESPONSE: {response.text}") # This text will tell you exactly why
-            return 88888 # Return an obvious failure number
+            print(f"🚨 UBER ERROR RESPONSE: {response.text}")
+            return 88888 
             
         data = response.json()
         return int(round(float(data.get('fee', 5.00)) * 100))
         
     except Exception as e:
         print(f"CRITICAL ERROR: {str(e)}")
-        return 77777 # Return an obvious failure number
+        return 77777
 
 @payment_bp.route('/get-delivery-fee', methods=['POST'])
 def get_delivery_fee():
