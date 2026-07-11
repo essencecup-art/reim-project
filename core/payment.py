@@ -244,23 +244,14 @@ def stripe_webhook():
             # 🛡️ If it was a reservation session, mark it explicitly as PAID
             if preserved_status == 'Reserved - Pending Payment':
                 order.status = 'Reserved - Paid'
-                print(f"📅 Webhook Verified: Reservation #{order_id} updated to PAID.")
+                print(f"📅 Webhook Verified: Reservation #{order_id} updated to PAID.")    
+                # 🛡️ THE WEBHOOK GUARD: If it was a reservation, keep it as 'reserved'!
+            elif preserved_status == 'reserved':
+                order.status = 'reserved'
+                print(f"📅 Webhook Verified: Reservation #{order_id} preserved as reserved.")
             else:
                 order.status = 'Paid'
                 print(f"✅ Webhook Verified: Normal order #{order_id} marked as Paid.")
-                
-            db.session.commit()
-        
-        if order_id:
-            order = Order.query.get(int(order_id))
-            if order:
-                # 🛡️ THE WEBHOOK GUARD: If it was a reservation, keep it as 'reserved'!
-                if preserved_status == 'reserved':
-                    order.status = 'reserved'
-                    print(f"📅 Webhook Verified: Reservation #{order_id} preserved as reserved.")
-                else:
-                    order.status = 'Paid'
-                    print(f"✅ Webhook Verified: Normal order #{order_id} marked as Paid.")
                     
                 db.session.commit()
 
