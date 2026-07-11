@@ -55,10 +55,8 @@ def get_cart_items_description_string():
     return ', '.join(item_descriptions) if item_descriptions else "No items"
 
 def get_uber_access_token():
-    """
-    Exchanges Client ID/Secret for a temporary access token.
-    """
-    auth_url = "https://auth.uber.com/oauth/v2/token"
+    # Use the explicit Sandbox Auth URL
+    auth_url = "https://sandbox-auth.uber.com/oauth/v2/token" # <--- IMPORTANT: Note the 'sandbox-' prefix
     payload = {
         "client_id": UBER_CLIENT_ID,
         "client_secret": UBER_CLIENT_SECRET,
@@ -70,6 +68,7 @@ def get_uber_access_token():
         if response.status_code == 200:
             return response.json().get('access_token')
         else:
+            # We now know this is where it's failing
             logging.error(f"Uber Auth Failed: {response.text}")
             return None
     except Exception as e:
