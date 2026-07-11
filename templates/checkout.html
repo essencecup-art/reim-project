@@ -1,6 +1,8 @@
 {% extends 'base.html' %}
 
-{% block title %}Settlement | LuxeEats
+{% block title %}Settlement | LuxeEats{% endblock %}
+
+{% block head %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 {% endblock %}
@@ -28,39 +30,18 @@
             </select>
         </div>
 
-        <!-- Dynamic Dine-In Room -->
         <div id="table-number-container">
             <label class="text-xs uppercase tracking-widest font-mono text-stone-400 block mb-2">Table Number</label>
             <input type="text" name="table_number" id="table_number" placeholder="e.g. 04" class="w-full bg-stone-900 border border-stone-800 rounded-lg p-3 text-stone-100 font-mono focus:outline-none focus:border-amber-500">
         </div>
 
-        <!-- ==========================================
-            1. THE HTML FORM SECTION
-            Drop this right where your delivery address goes
-            ========================================== -->
         <div id="delivery-address-container" class="space-y-4 my-6">
-            <label class="text-xs uppercase tracking-widest font-mono text-stone-400 block">
-                Delivery Location
-            </label>
-            
-            <!-- This is the visible text box that auto-fills with the GPS address -->
-            <input type="text" 
-                id="delivery_address" 
-                name="delivery_address" 
-                placeholder="Waiting for GPS or typing address..." 
-                class="w-full bg-stone-900 border border-stone-800 rounded-lg p-3 text-stone-100 font-mono focus:outline-none focus:border-amber-500">
-            
-            <!-- This is the dark-themed visual map box -->
+            <label class="text-xs uppercase tracking-widest font-mono text-stone-400 block">Delivery Location</label>
+            <input type="text" id="delivery_address" name="delivery_address" placeholder="Waiting for GPS..." class="w-full bg-stone-900 border border-stone-800 rounded-lg p-3 text-stone-100 font-mono focus:outline-none focus:border-amber-500">
             <div id="map" class="w-full h-64 bg-stone-950 border border-stone-800 rounded-lg overflow-hidden"></div>
             
-            <!-- SECRET BACKEND FIELDS: These stay hidden from the user, 
-                but they hold the exact GPS numbers for Uber/DoorDash -->
             <input type="hidden" name="latitude" id="delivery_lat">
             <input type="hidden" name="longitude" id="delivery_lng">
-            
-            <p class="text-[10px] font-mono text-stone-500 italic">
-                💡 Tip: If the GPS is slightly off, just drag the map pin to your exact door.
-            </p>
         </div>
 
         <div>
@@ -71,150 +52,104 @@
             </select>
         </div>
 
-        <!-- Contextual Cash UI Notice Display box -->
-        <div id="cash-notice" class="p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-200 text-xs font-mono leading-relaxed">
-            💡 Cash selected. Please prepare exact change for your rider or pay directly at the front counter.
+        <div id="cash-notice" class="p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-200 text-xs font-mono leading-relaxed hidden">
+            💡 Cash selected. Please prepare exact change.
         </div>
-                <!-- Add this to checkout.html inside your form -->
+
         <div id="fee-summary" class="hidden p-4 bg-stone-900 border border-stone-800 rounded-lg my-4">
             <div class="flex justify-between font-mono text-sm text-stone-400">
                 <span>Delivery Fee:</span>
                 <span id="display-delivery-fee" class="text-stone-100">$0.00</span>
             </div>
         </div>
+        
         <button type="submit" class="w-full bg-amber-500 text-stone-950 font-bold tracking-wide uppercase py-4 rounded-xl hover:bg-amber-400 transition shadow-lg shadow-amber-500/10">
             Process Order & Clear Account
         </button>
     </form>
-
-    <div class="text-center pt-4">
-        <a href="{{ url_for('cart.show_cart') }}" class="text-xs font-mono uppercase tracking-wider text-stone-500 hover:text-stone-400">← Return to Selection</a>
-    </div>
 </div>
 
-<!-- ==========================================
-     2. THE GOOGLE MAPS ENGINE
-     Put this at the very bottom of your file.
-     REMEMBER: Replace 'YOUR_GOOGLE_MAPS_API_KEY' with your real key.
-     ========================================== -->
-
 <script>
-let map;
-let marker;
+    // Global Map Variables
+    let map;
+    let marker;
 
-function initDeliveryMap() {
-    // 1. Initialize map (centered on a default location)
-    map = L.map('map').setView([40.7128, -74.0060], 13);
+    // 1. Initialize Map
+    function initDeliveryMap() {
+        map = L.map('map').setView([10.7765, 106.7009], 13); // Default to HCMC
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
 
-    // 2. Add OpenStreetMap tiles
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
+        marker = L.marker([10.7765, 106.7009], {draggable: true}).addTo(map);
 
-    // 3. Add draggable marker
-    marker = L.marker([40.7128, -74.0060], {draggable: true}).addTo(map);
-
-    // 4. Update coordinates and fee on drag
-    marker.on('moveend', function(e) {
-        const pos = marker.getLatLng();
-        saveCoordinates(pos.lat, pos.lng);
-        updateDeliveryFee(pos.lat, pos.lng);
-    });
-
-    // 5. Try getting user GPS
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition((position) => {
-            const lat = position.coords.latitude;
-            const lng = position.coords.longitude;
-            map.setView([lat, lng], 15);
-            marker.setLatLng([lat, lng]);
-            saveCoordinates(lat, lng);
-            updateDeliveryFee(lat, lng);
+        // Move event
+        marker.on('moveend', function(e) {
+            const pos = marker.getLatLng();
+            saveCoordinates(pos.lat, pos.lng);
+            updateDeliveryFee(pos.lat, pos.lng);
         });
+
+        // Browser Geolocation
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition((position) => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                map.setView([lat, lng], 15);
+                marker.setLatLng([lat, lng]);
+                saveCoordinates(lat, lng);
+                updateDeliveryFee(lat, lng);
+            });
+        }
     }
-}
 
-// Ensure the helper function exists
-function saveCoordinates(lat, lng) {
-    document.getElementById('delivery_lat').value = lat;
-    document.getElementById('delivery_lng').value = lng;
-}
+    // 2. Helper functions
+    function saveCoordinates(lat, lng) {
+        document.getElementById('delivery_lat').value = lat;
+        document.getElementById('delivery_lng').value = lng;
+    }
 
-// Global Fee Updater
-async function updateDeliveryFee(lat, lng) {
-    const response = await fetch('/get-delivery-fee', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ latitude: lat, longitude: lng })
+    async function updateDeliveryFee(lat, lng) {
+        const response = await fetch('/get-delivery-fee', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ latitude: lat, longitude: lng })
+        });
+        const data = await response.json();
+        document.getElementById('display-delivery-fee').innerText = `$${data.fee_dollars.toFixed(2)}`;
+        document.getElementById('fee-summary').classList.remove('hidden');
+    }
+
+    function toggleFulfillmentInputs() {
+        const fulfillment = document.getElementById('fulfillment-select').value;
+        const tableContainer = document.getElementById('table-number-container');
+        const deliveryContainer = document.getElementById('delivery-address-container');
+        
+        if (fulfillment === 'Delivery') {
+            tableContainer.classList.add('hidden');
+            deliveryContainer.classList.remove('hidden');
+            // Re-invalidate map size because it was hidden
+            setTimeout(() => map.invalidateSize(), 100);
+        } else if (fulfillment === 'Takeaway') {
+            tableContainer.classList.add('hidden');
+            deliveryContainer.classList.add('hidden');
+        } else {
+            tableContainer.classList.remove('hidden');
+            deliveryContainer.classList.add('hidden');
+        }
+    }
+
+    function togglePaymentNotice() {
+        const payment = document.getElementById('payment-method-select').value;
+        const cashNotice = document.getElementById('cash-notice');
+        document.getElementById('cash-notice').classList.toggle('hidden', payment !== 'Cash');
+    }
+
+    // Startup
+    document.addEventListener('DOMContentLoaded', () => {
+        initDeliveryMap();
+        toggleFulfillmentInputs();
+        togglePaymentNotice();
     });
-    const data = await response.json();
-    document.getElementById('display-delivery-fee').innerText = `$${data.fee_dollars.toFixed(2)}`;
-    document.getElementById('fee-summary').classList.remove('hidden');
-}
-
-// Init map when page loads
-document.addEventListener('DOMContentLoaded', initDeliveryMap);
-</script>
-
-<script>
-function toggleFulfillmentInputs() {
-    const fulfillment = document.getElementById('fulfillment-select').value;
-    const tableContainer = document.getElementById('table-number-container');
-    const deliveryContainer = document.getElementById('delivery-address-container');
-    
-    if (fulfillment === 'Delivery') {
-        tableContainer.classList.add('hidden');
-        deliveryContainer.classList.remove('hidden');
-    } else if (fulfillment === 'Takeaway') {
-        tableContainer.classList.add('hidden');
-        deliveryContainer.classList.add('hidden');
-    } else {
-        tableContainer.classList.remove('hidden');
-        deliveryContainer.classList.add('hidden');
-    }
-}
-
-function togglePaymentNotice() {
-    const payment = document.getElementById('payment-method-select').value;
-    const cashNotice = document.getElementById('cash-notice');
-    
-    if (payment === 'Cash') {
-        cashNotice.classList.remove('hidden');
-    } else {
-        cashNotice.classList.add('hidden');
-    }
-}
-
-// Ensure layout alignment sets up correctly when page mounts
-document.addEventListener('DOMContentLoaded', () => {
-    toggleFulfillmentInputs();
-    togglePaymentNotice();
-});
-</script>
-
-<script>
-    // Add this to your JS inside checkout.html
-async function updateDeliveryFee(lat, lng) {
-    const response = await fetch('/get-delivery-fee', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ latitude: lat, longitude: lng })
-    });
-    
-    const data = await response.json();
-    
-    // Update the UI
-    document.getElementById('display-delivery-fee').innerText = `$${data.fee_dollars.toFixed(2)}`;
-    document.getElementById('fee-summary').classList.remove('hidden');
-}
-
-// Call this inside your 'dragend' listener in initDeliveryMap
-marker.addListener('dragend', () => {
-    const pos = marker.getPosition();
-    saveCoordinates(pos.lat(), pos.lng());
-    
-    // Trigger the fee update
-    updateDeliveryFee(pos.lat(), pos.lng());
-});
 </script>
 {% endblock %}
