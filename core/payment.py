@@ -56,7 +56,7 @@ def get_cart_items_description_string():
 
 def get_uber_access_token():
     # Use the explicit Sandbox Auth URL
-    auth_url = "https://sandbox-auth.uber.com/oauth/v2/token" # <--- IMPORTANT: Note the 'sandbox-' prefix
+    auth_url = "https://login.uber.com/oauth/v2/token" # <--- IMPORTANT: Note the 'sandbox-' prefix
     payload = {
         "client_id": UBER_CLIENT_ID,
         "client_secret": UBER_CLIENT_SECRET,
