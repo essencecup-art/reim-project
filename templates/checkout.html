@@ -21,20 +21,31 @@
 
     <form action="{{ url_for('payment.handle_settlement') }}" method="POST" class="space-y-6">
         
+        <!-- Fulfillment Dropdown -->
         <div>
             <label class="text-xs uppercase tracking-widest font-mono text-stone-400 block mb-2">Fulfillment Method</label>
             <select name="fulfillment_method" id="fulfillment-select" class="w-full bg-stone-900 border border-stone-800 rounded-lg p-3 text-stone-100 font-mono focus:outline-none focus:border-amber-500" onchange="toggleFulfillmentInputs()">
                 <option value="Dine-In">Dine-In (Eat at Restaurant)</option>
                 <option value="Takeaway">Takeaway (Pick Up)</option>
                 <option value="Delivery">Home Delivery</option>
+                <option value="Reservation">📅 Future Reservation (Pre-order Menu)</option>
             </select>
         </div>
 
+        <!-- Dynamic Table Input -->
         <div id="table-number-container">
             <label class="text-xs uppercase tracking-widest font-mono text-stone-400 block mb-2">Table Number</label>
             <input type="text" name="table_number" id="table_number" placeholder="e.g. 04" class="w-full bg-stone-900 border border-stone-800 rounded-lg p-3 text-stone-100 font-mono focus:outline-none focus:border-amber-500">
         </div>
 
+        <!-- Dynamic Reservation Time Input -->
+        <div id="reservation-time-container" class="hidden">
+            <label class="text-xs uppercase tracking-widest font-mono text-stone-400 block mb-2">Target Dinner Time</label>
+            <input type="datetime-local" name="reservation_time" id="reservation_time" class="w-full bg-stone-900 border border-stone-800 rounded-lg p-3 text-stone-100 font-mono focus:outline-none focus:border-amber-500 text-stone-300">
+            <p class="text-[11px] text-stone-500 font-mono mt-1.5">Ticket goes live on the kitchen feed automatically at this exact time.</p>
+        </div>
+
+        <!-- Dynamic Delivery Location Input -->
         <div id="delivery-address-container" class="space-y-4 my-6">
             <label class="text-xs uppercase tracking-widest font-mono text-stone-400 block">Delivery Location</label>
             <input type="text" id="delivery_address" name="delivery_address" placeholder="Waiting for GPS..." class="w-full bg-stone-900 border border-stone-800 rounded-lg p-3 text-stone-100 font-mono focus:outline-none focus:border-amber-500">
@@ -44,6 +55,7 @@
             <input type="hidden" name="longitude" id="delivery_lng">
         </div>
 
+        <!-- Payment Dropdown -->
         <div>
             <label class="text-xs uppercase tracking-widest font-mono text-stone-400 block mb-2">Payment Method</label>
             <select name="payment_method" id="payment-method-select" class="w-full bg-stone-900 border border-stone-800 rounded-lg p-3 text-stone-100 font-mono focus:outline-none focus:border-amber-500" onchange="togglePaymentNotice()">
@@ -70,59 +82,41 @@
 </div>
 
 <script>
-    // Global Map Variables
     let map;
     let marker;
 
 function initDeliveryMap() {
-    // 1. Initialize map
     map = L.map('map').setView([10.7765, 106.7009], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap'
     }).addTo(map);
 
-    // 2. Create the draggable marker
     marker = L.marker([10.7765, 106.7009], {draggable: true}).addTo(map);
-    console.log("✅ Map and Marker initialized");
 
-    // 3. Attach the listener ONLY after marker exists
-marker.on('moveend', async function(e) {
-    console.log("📍 Event Triggered: Pin moved!");
-    
-    const pos = marker.getLatLng();
-    document.getElementById('delivery_lat').value = pos.lat;
-    document.getElementById('delivery_lng').value = pos.lng;
+    marker.on('moveend', async function(e) {
+        const pos = marker.getLatLng();
+        document.getElementById('delivery_lat').value = pos.lat;
+        document.getElementById('delivery_lng').value = pos.lng;
 
-    // Fetch Address
-    try {
-        const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.lat}&lon=${pos.lng}&addressdetails=1`;
-        const response = await fetch(url);
-        const data = await response.json();
-        
-        // Single source of truth for the address
-        if (data && data.display_name) {
-            document.getElementById('delivery_address').value = data.display_name;
-            console.log("✅ Address updated in UI");
-        } else {
-            document.getElementById('delivery_address').value = `Lat: ${pos.lat.toFixed(4)}, Lng: ${pos.lng.toFixed(4)}`;
+        try {
+            const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.lat}&lon=${pos.lng}&addressdetails=1`;
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            if (data && data.display_name) {
+                document.getElementById('delivery_address').value = data.display_name;
+            } else {
+                document.getElementById('delivery_address').value = `Lat: ${pos.lat.toFixed(4)}, Lng: ${pos.lng.toFixed(4)}`;
+            }
+        } catch (err) {
+            console.error("❌ Geocoding failed:", err);
         }
-    } catch (err) {
-        console.error("❌ Geocoding failed:", err);
-    }
 
-    // Call the fee function (this was being skipped because of the error above!)
-    updateDeliveryFee(pos.lat, pos.lng);
-});
+        updateDeliveryFee(pos.lat, pos.lng);
+    });
 
-    // 4. Trigger one initial update
     marker.fire('moveend');
 }
-
-    // 2. Helper functions
-    function saveCoordinates(lat, lng) {
-        document.getElementById('delivery_lat').value = lat;
-        document.getElementById('delivery_lng').value = lng;
-    }
 
     async function updateDeliveryFee(lat, lng) {
         const response = await fetch('/get-delivery-fee', {
@@ -135,32 +129,35 @@ marker.on('moveend', async function(e) {
         document.getElementById('fee-summary').classList.remove('hidden');
     }
 
+    // --- UPDATED LAYOUT TOGGLE LOGIC ---
     function toggleFulfillmentInputs() {
         const fulfillment = document.getElementById('fulfillment-select').value;
         const tableContainer = document.getElementById('table-number-container');
         const deliveryContainer = document.getElementById('delivery-address-container');
+        const reservationContainer = document.getElementById('reservation-time-container');
+        
+        // Hide all conditional inputs cleanly by default
+        tableContainer.classList.add('hidden');
+        deliveryContainer.classList.add('hidden');
+        reservationContainer.classList.add('hidden');
         
         if (fulfillment === 'Delivery') {
-            tableContainer.classList.add('hidden');
             deliveryContainer.classList.remove('hidden');
-            // Re-invalidate map size because it was hidden
             setTimeout(() => map.invalidateSize(), 100);
-        } else if (fulfillment === 'Takeaway') {
-            tableContainer.classList.add('hidden');
-            deliveryContainer.classList.add('hidden');
-        } else {
+        } else if (fulfillment === 'Dine-In') {
             tableContainer.classList.remove('hidden');
-            deliveryContainer.classList.add('hidden');
+        } else if (fulfillment === 'Reservation') {
+            // Unmask the premium calendar picker state
+            reservationContainer.classList.remove('hidden');
         }
+        // Takeaway leaves everything hidden, maintaining standard state clearance
     }
 
     function togglePaymentNotice() {
         const payment = document.getElementById('payment-method-select').value;
-        const cashNotice = document.getElementById('cash-notice');
         document.getElementById('cash-notice').classList.toggle('hidden', payment !== 'Cash');
     }
 
-    // Startup
     document.addEventListener('DOMContentLoaded', () => {
         initDeliveryMap();
         toggleFulfillmentInputs();

@@ -3,14 +3,35 @@
 
 {% block content %}
 <div class="space-y-6">
+    <!-- Header Command Bar -->
     <div class="flex justify-between items-center border-b border-stone-800 pb-4">
         <div>
-            <h1 class="text-2xl font-bold text-stone-100">Active Cooking Tickets</h1>
+            <h1 class="text-2xl font-bold text-stone-100">
+                {% if current_view == 'active' %}Active Cooking Tickets
+                {% elif current_view == 'reserved' %}Upcoming Reservations
+                {% else %}All Kitchen Tickets{% endif %}
+            </h1>
             <p class="text-stone-400 text-xs">Advance orders as they progress through the line.</p>
         </div>
         <div class="font-mono text-xs text-amber-500/70 uppercase tracking-widest bg-stone-900 px-3 py-1.5 border border-stone-800 rounded-md animate-pulse">
             ● Live Sync Active
         </div>
+    </div>
+
+    <!-- Navigation Control Tabs -->
+    <div class="flex space-x-1.5 bg-stone-950 p-1 border border-stone-800/60 rounded-lg inline-flex font-mono text-xs">
+        <a href="{{ url_for('staff.kitchen_feed', view='all') }}" 
+           class="px-4 py-2 rounded-md transition {% if current_view == 'all' %}bg-stone-900 text-amber-500 border border-stone-800/80 font-bold{% else %}text-stone-400 hover:text-stone-200{% endif %}">
+            All Feed
+        </a>
+        <a href="{{ url_for('staff.kitchen_feed', view='active') }}" 
+           class="px-4 py-2 rounded-md transition {% if current_view == 'active' %}bg-stone-900 text-amber-500 border border-stone-800/80 font-bold{% else %}text-stone-400 hover:text-stone-200{% endif %}">
+            Active Line
+        </a>
+        <a href="{{ url_for('staff.kitchen_feed', view='reserved') }}" 
+           class="px-4 py-2 rounded-md transition {% if current_view == 'reserved' %}bg-stone-900 text-amber-500 border border-stone-800/80 font-bold{% else %}text-stone-400 hover:text-stone-200{% endif %}">
+            Reserved Tickets
+        </a>
     </div>
 
     <!-- Active Tickets Grid Layout -->
@@ -33,25 +54,32 @@
             </div>
 
             <div class="grid grid-cols-2 gap-2 pt-2 border-t border-stone-800/60 font-mono text-xs">
+                {% if order.status == 'reserved' %}
+                <button onclick="updateStatus({{ order.id }}, 'active')" class="p-2.5 rounded text-center bg-amber-500/10 text-amber-500 border border-amber-500/20 hover:bg-amber-500/20 transition col-span-2">Move to Active Line</button>
+                {% else %}
                 <button onclick="updateStatus({{ order.id }}, 'Preparing')" class="p-2.5 rounded text-center bg-amber-500/10 text-amber-500 border border-amber-500/20 hover:bg-amber-500/20 transition">Start Cooking</button>
                 <button onclick="updateStatus({{ order.id }}, 'Completed')" class="p-2.5 rounded text-center bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/20 transition">Mark Completed</button>
+                {% endif %}
             </div>
         </div>
         {% else %}
         <div class="col-span-full p-12 text-center bg-stone-900/30 border border-stone-800/50 rounded-xl text-stone-500 text-sm italic font-mono">
-            🍳 No active cooking tickets on the line right now.
+            🍳 No cooking tickets found in this tab.
         </div>
         {% endfor %}
     </div>
 </div>
 
 <script>
+// Capture the view state passed from Flask directly into JavaScript
+const currentView = "{{ current_view }}";
+
 function checkEmptyState() {
     const gridContainer = document.getElementById('tickets-grid');
     if (gridContainer && gridContainer.querySelectorAll('[id^="ticket-"]').length === 0) {
         gridContainer.innerHTML = `
             <div class="col-span-full p-12 text-center bg-stone-900/30 border border-stone-800/50 rounded-xl text-stone-500 text-sm italic font-mono">
-                🍳 No active cooking tickets on the line right now.
+                🍳 No cooking tickets found in this tab.
             </div>`;
     }
 }
@@ -66,7 +94,8 @@ function updateStatus(orderId, nextStatus) {
         if (res.ok) {
             const ticketCard = document.getElementById(`ticket-${orderId}`);
             if (ticketCard) {
-                if (nextStatus === 'Completed') {
+                // If moving views or completing, remove item from the current view immediately
+                if (nextStatus === 'Completed' || currentView !== 'all') {
                     ticketCard.remove();
                     checkEmptyState();
                 } else {
@@ -83,7 +112,8 @@ function updateStatus(orderId, nextStatus) {
 
 async function updateKitchenStream() {
     try {
-        const response = await fetch('/staff/api/orders/stream');
+        // Pass the query parameter forward dynamically inside the polling fetch loop
+        const response = await fetch(`/staff/api/orders/stream?view=${currentView}`);
         const data = await response.json();
         
         const gridContainer = document.getElementById('tickets-grid');
@@ -91,21 +121,19 @@ async function updateKitchenStream() {
         if (!data.orders || data.orders.length === 0) {
             gridContainer.innerHTML = `
                 <div class="col-span-full p-12 text-center bg-stone-900/30 border border-stone-800/50 rounded-xl text-stone-500 text-sm italic font-mono">
-                    🍳 No active cooking tickets on the line right now.
+                    🍳 No cooking tickets found in this tab.
                 </div>`;
             return;
         }
 
-        // Drop initial dynamic empty text card if new orders have arrived
         const emptyStateFallback = gridContainer.querySelector('.col-span-full');
         if (emptyStateFallback) emptyStateFallback.remove();
 
-        // --- LIVE-DIFF RECONCILIATION ENGINE ---
         const incomingIds = data.orders.map(o => o.id);
         const currentCards = Array.from(gridContainer.querySelectorAll('[id^="ticket-"]'));
         const currentIds = currentCards.map(card => parseInt(card.id.replace('ticket-', '')));
 
-        // 1. Evict processed orders
+        // 1. Evict processed orders from UI view container
         currentIds.forEach(id => {
             if (!incomingIds.includes(id)) {
                 const el = document.getElementById(`ticket-${id}`);
@@ -113,7 +141,7 @@ async function updateKitchenStream() {
             }
         });
 
-        // 2. Upsert modifications or new additions
+        // 2. Upsert modifications or additions
         data.orders.forEach(order => {
             const existingCard = document.getElementById(`ticket-${order.id}`);
             
@@ -123,6 +151,16 @@ async function updateKitchenStream() {
                     badge.innerText = order.status.toUpperCase();
                 }
             } else {
+                // Determine layout buttons inside stream engine based on status
+                let actionButtonsHTML = '';
+                if (order.status === 'reserved') {
+                    actionButtonsHTML = `<button onclick="updateStatus(${order.id}, 'active')" class="p-2.5 rounded text-center bg-amber-500/10 text-amber-500 border border-amber-500/20 hover:bg-amber-500/20 transition col-span-2">Move to Active Line</button>`;
+                } else {
+                    actionButtonsHTML = `
+                        <button onclick="updateStatus(${order.id}, 'Preparing')" class="p-2.5 rounded text-center bg-amber-500/10 text-amber-500 border border-amber-500/20 hover:bg-amber-500/20 transition">Start Cooking</button>
+                        <button onclick="updateStatus(${order.id}, 'Completed')" class="p-2.5 rounded text-center bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/20 transition">Mark Completed</button>`;
+                }
+
                 const cardHTML = `
                     <div class="p-5 bg-stone-900 border border-stone-800 rounded-xl flex flex-col justify-between space-y-4" id="ticket-${order.id}">
                         <div class="flex justify-between items-center border-b border-stone-800 pb-2">
@@ -141,8 +179,7 @@ async function updateKitchenStream() {
                         </div>
 
                         <div class="grid grid-cols-2 gap-2 pt-2 border-t border-stone-800/60 font-mono text-xs">
-                            <button onclick="updateStatus(${order.id}, 'Preparing')" class="p-2.5 rounded text-center bg-amber-500/10 text-amber-500 border border-amber-500/20 hover:bg-amber-500/20 transition">Start Cooking</button>
-                            <button onclick="updateStatus(${order.id}, 'Completed')" class="p-2.5 rounded text-center bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/20 transition">Mark Completed</button>
+                            ${actionButtonsHTML}
                         </div>
                     </div>`;
                 gridContainer.insertAdjacentHTML('beforeend', cardHTML);
@@ -156,7 +193,6 @@ async function updateKitchenStream() {
     }
 }
 
-// Background poll executes seamlessly every 4 seconds
 setInterval(updateKitchenStream, 4000);
 </script>
 {% endblock %}

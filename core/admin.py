@@ -30,7 +30,7 @@ def staff_required(f):
             return redirect(url_for('main.home'))
         return f(*args, **kwargs)
     return decorated_function
-
+   
 # =====================================================================
 # 👑 OWNER FINANCIAL ENVIRONMENT (admin_bp)
 # =====================================================================
@@ -131,27 +131,56 @@ def admin_update_order_status(order_id):
     return jsonify({'message': f'Admin updated order {order_id} to {chef_status}.'}), 200
 
 # =====================================================================
-# 🍳 KITCHEN LINE ENVIRONMENT (staff_bp)
+# 👨‍🍳 KITCHEN LINE ENVIRONMENT (staff_bp)
 # =====================================================================
 
 @staff_bp.route('/kitchen')
 @staff_required
 def kitchen_feed():
-    """Operational ticket monitor view for the cooking crew (No financial data)."""
-    # Only pull tickets that are Paid (from Stripe), Preparing (cooking), or Pending Cash
-    active_tickets = Order.query.options(selectinload(Order.items)).filter(
-        Order.status.in_(['Paid', 'Preparing', 'Pending Cash Payment'])
-    ).order_by(Order.created_at.asc()).all()
-    return render_template('kitchen_feed.html', orders=active_tickets)
+    """Operational ticket monitor view with dynamic tab filtering (?view=all/active/reserved)."""
+    # 1. Catch which mode the chef clicked from the URL query parameters (default to 'all')
+    view_mode = request.args.get('view', 'all')
+    
+    # Base query to fetch orders with their items loaded efficiently
+    query = Order.query.options(selectinload(Order.items))
+    
+    # 2. Filter the database query based on the active tab mode
+    if view_mode == 'active':
+        # Shows tickets currently on the line cooking
+        orders = query.filter(
+            Order.status.in_(['Paid', 'Preparing', 'Pending Cash Payment', 'active'])
+        ).order_by(Order.created_at.asc()).all()
+        
+    elif view_mode == 'reserved':
+        # Shows ONLY upcoming reservations, sorted chronologically (earliest first!)
+        orders = query.filter(
+            Order.status == 'reserved'
+        ).order_by(Order.created_at.asc()).all()
+        
+    else:  # view_mode == 'all'
+        # Shows everything the kitchen needs to care about
+        orders = query.filter(
+            Order.status.in_(['Paid', 'Preparing', 'Pending Cash Payment', 'active', 'reserved'])
+        ).order_by(Order.created_at.asc()).all()
+
+    # Pass the filtered orders AND the current view mode back to the HTML template
+    return render_template('kitchen_feed.html', orders=orders, current_view=view_mode)
 
 
 @staff_bp.route('/api/orders/stream')
 @staff_required
 def kitchen_stream():
-    """Live background data stream built specifically for the kitchen line."""
-    tickets = Order.query.options(selectinload(Order.items)).filter(
-        Order.status.in_(['Paid', 'Preparing', 'Pending Cash Payment'])
-    ).order_by(Order.created_at.asc()).all()
+    """Live background polling stream that respects the selected kitchen tab filter."""
+    view_mode = request.args.get('view', 'all')
+    query = Order.query.options(selectinload(Order.items))
+    
+    # Mirror the exact same database filters so the live updates don't break the user's view
+    if view_mode == 'active':
+        tickets = query.filter(Order.status.in_(['Paid', 'Preparing', 'Pending Cash Payment', 'active'])).order_by(Order.created_at.asc()).all()
+    elif view_mode == 'reserved':
+        tickets = query.filter(Order.status == 'reserved').order_by(Order.created_at.asc()).all()
+    else:
+        tickets = query.filter(Order.status.in_(['Paid', 'Preparing', 'Pending Cash Payment', 'active', 'reserved'])).order_by(Order.created_at.asc()).all()
     
     tickets_data = []
     for t in tickets:
