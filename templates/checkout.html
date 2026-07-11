@@ -26,10 +26,11 @@
             <label class="text-xs uppercase tracking-widest font-mono text-stone-400 block mb-2">Fulfillment Method</label>
             <select name="fulfillment_method" id="fulfillment-select" class="w-full bg-stone-900 border border-stone-800 rounded-lg p-3 text-stone-100 font-mono focus:outline-none focus:border-amber-500" onchange="toggleFulfillmentInputs()">
                 <option value="Dine-In">Dine-In (Eat at Restaurant)</option>
-                <option value="Takeaway">Takeaway (Pick Up)</option>
-                <option value="Delivery">Home Delivery</option>
                 <option value="Reservation">📅 Future Reservation (Pre-order Menu)</option>
-            </select>
+                <option value="Takeaway">Takeaway (Pick Up)</option>
+                <!-- Disable it so they can see it, but can't click it during the demo -->
+                <option value="Delivery" disabled>🚚 Automated Delivery (Integration Coming Soon)</option>
+            </select>   
         </div>
 
         <!-- Dynamic Table Input -->
@@ -39,10 +40,22 @@
         </div>
 
         <!-- Dynamic Reservation Time Input -->
-        <div id="reservation-time-container" class="hidden">
-            <label class="text-xs uppercase tracking-widest font-mono text-stone-400 block mb-2">Target Dinner Time</label>
-            <input type="datetime-local" name="reservation_time" id="reservation_time" class="w-full bg-stone-900 border border-stone-800 rounded-lg p-3 text-stone-100 font-mono focus:outline-none focus:border-amber-500 text-stone-300">
-            <p class="text-[11px] text-stone-500 font-mono mt-1.5">Ticket goes live on the kitchen feed automatically at this exact time.</p>
+        <div id="reservation-time-container" class="hidden space-y-4">
+            <div>
+                <label class="text-xs uppercase tracking-widest font-mono text-stone-400 block mb-2">Guest Name</label>
+                <input type="text" name="guest_name" id="guest_name" placeholder="e.g., Alexander Wright" class="w-full bg-stone-900 border border-stone-800 rounded-lg p-3 text-stone-100 font-mono focus:outline-none focus:border-amber-500">
+            </div>
+            
+            <div>
+                <label class="text-xs uppercase tracking-widest font-mono text-stone-400 block mb-2">Contact Phone</label>
+                <input type="tel" name="guest_contact" id="guest_contact" placeholder="e.g., +1 (555) 019-2834" class="w-full bg-stone-900 border border-stone-800 rounded-lg p-3 text-stone-100 font-mono focus:outline-none focus:border-amber-500">
+            </div>
+
+            <div>
+                <label class="text-xs uppercase tracking-widest font-mono text-stone-400 block mb-2">Target Dinner Time</label>
+                <input type="datetime-local" name="reservation_time" id="reservation_time" class="w-full bg-stone-900 border border-stone-800 rounded-lg p-3 text-stone-100 font-mono focus:outline-none focus:border-amber-500 text-stone-300">
+                <p class="text-[11px] text-stone-500 font-mono mt-1.5">Ticket goes live on the kitchen feed automatically at this exact time.</p>
+            </div>
         </div>
 
         <!-- Dynamic Delivery Location Input -->

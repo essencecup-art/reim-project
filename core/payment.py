@@ -131,6 +131,10 @@ def handle_settlement():
     current_total = get_active_cart_total_cents() 
     base_description = get_cart_items_description_string() 
     
+    guest_name = html.escape(request.form.get('guest_name', 'Anonymous Guest')).strip()[:100]
+    guest_contact = html.escape(request.form.get('guest_contact', 'No Phone Provided')).strip()[:30]
+    reservation_time = request.form.get('reservation_time', '')
+
     # 1. Map out the fulfillment type and build descriptions
     if fulfillment_method == 'Delivery' and delivery_address:
         delivery_cost = get_delivery_quote_cents(float(latitude), float(longitude))     
@@ -143,9 +147,13 @@ def handle_settlement():
         initial_status = 'Pending'
         
     elif fulfillment_method == 'Reservation':
-        # 📅 BOOM: New pathway for your scheduled orders!
-        final_description = f"📅 FUTURE RESERVATION | Items: {base_description}"
-        initial_status = 'reserved'
+        final_description = f"📅 FUTURE RESERVATION for {guest_name} ({guest_contact}) at {reservation_time} | Items: {base_description}"
+    
+    # 🎯 Dynamic Status Assignment based on the payment method
+        if payment_method == 'Stripe':
+            initial_status = 'Reserved - Pending Payment'
+        else:
+            initial_status = 'Reserved - Cash'
         
     else:
         final_description = f"🛍️ TAKEAWAY | Items: {base_description}"
@@ -229,6 +237,19 @@ def stripe_webhook():
         session_obj = event['data']['object']
         order_id = session_obj.get('metadata', {}).get('order_id')
         preserved_status = session_obj.get('metadata', {}).get('preserved_status')
+    
+    if order_id:
+        order = Order.query.get(int(order_id))
+        if order:
+            # 🛡️ If it was a reservation session, mark it explicitly as PAID
+            if preserved_status == 'Reserved - Pending Payment':
+                order.status = 'Reserved - Paid'
+                print(f"📅 Webhook Verified: Reservation #{order_id} updated to PAID.")
+            else:
+                order.status = 'Paid'
+                print(f"✅ Webhook Verified: Normal order #{order_id} marked as Paid.")
+                
+            db.session.commit()
         
         if order_id:
             order = Order.query.get(int(order_id))
