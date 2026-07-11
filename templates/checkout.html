@@ -72,7 +72,13 @@
         <div id="cash-notice" class="p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-200 text-xs font-mono leading-relaxed">
             💡 Cash selected. Please prepare exact change for your rider or pay directly at the front counter.
         </div>
-
+                <!-- Add this to checkout.html inside your form -->
+        <div id="fee-summary" class="hidden p-4 bg-stone-900 border border-stone-800 rounded-lg my-4">
+            <div class="flex justify-between font-mono text-sm text-stone-400">
+                <span>Delivery Fee:</span>
+                <span id="display-delivery-fee" class="text-stone-100">$0.00</span>
+            </div>
+        </div>
         <button type="submit" class="w-full bg-amber-500 text-stone-950 font-bold tracking-wide uppercase py-4 rounded-xl hover:bg-amber-400 transition shadow-lg shadow-amber-500/10">
             Process Order & Clear Account
         </button>
@@ -227,6 +233,32 @@ function togglePaymentNotice() {
 document.addEventListener('DOMContentLoaded', () => {
     toggleFulfillmentInputs();
     togglePaymentNotice();
+});
+</script>
+
+<script>
+    // Add this to your JS inside checkout.html
+async function updateDeliveryFee(lat, lng) {
+    const response = await fetch('/get-delivery-fee', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ latitude: lat, longitude: lng })
+    });
+    
+    const data = await response.json();
+    
+    // Update the UI
+    document.getElementById('display-delivery-fee').innerText = `$${data.fee_dollars.toFixed(2)}`;
+    document.getElementById('fee-summary').classList.remove('hidden');
+}
+
+// Call this inside your 'dragend' listener in initDeliveryMap
+marker.addListener('dragend', () => {
+    const pos = marker.getPosition();
+    saveCoordinates(pos.lat(), pos.lng());
+    
+    // Trigger the fee update
+    updateDeliveryFee(pos.lat(), pos.lng());
 });
 </script>
 {% endblock %}
