@@ -125,6 +125,7 @@ def get_delivery_fee():
 
 @payment_bp.route('/handle-settlement', methods=['POST'])
 def handle_settlement():
+    print(f"DEBUG FORM DATA: {request.form}")
     fulfillment_method = request.form.get('fulfillment_method')
     payment_method = request.form.get('payment_method')
     
