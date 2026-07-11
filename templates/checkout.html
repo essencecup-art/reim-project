@@ -95,19 +95,28 @@ function initDeliveryMap() {
 
         // Try to update address via Nominatim
         try {
-            const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.lat}&lon=${pos.lng}`;
+            const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.lat}&lon=${pos.lng}&addressdetails=1`;
             const response = await fetch(url);
             const data = await response.json();
             
+            // Only update if we actually get a display_name, otherwise keep it clean
+            if (data && data.display_name) {
+                document.getElementById('delivery_address').value = data.display_name;
+            } else {
+                // Instead of crashing or showing "Address not found", show coords
+                document.getElementById('delivery_address').value = `Lat: ${pos.lat.toFixed(4)}, Lng: ${pos.lng.toFixed(4)}`;
+            }
+        } catch (err) {
+            console.error("❌ Geocoding failed:", err);
+        }       
+
             if (data.display_name) {
                 document.getElementById('delivery_address').value = data.display_name;
                 console.log("✅ Address updated in UI");
             } else {
                 document.getElementById('delivery_address').value = "Address not found";
             }
-        } catch (err) {
-            console.error("❌ Geocoding failed:", err);
-        }
+
 
         // Call your fee function
         updateDeliveryFee(pos.lat, pos.lng);

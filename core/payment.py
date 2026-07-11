@@ -76,43 +76,34 @@ def get_uber_access_token():
         return None
 
 def get_delivery_quote_cents(lat, lng):
-    """
-    Pings the Uber Sandbox API to get a live delivery fee.
-    """
-    # 1. Get the Token
     token = get_uber_access_token()
     if not token:
-        # If auth fails, return a fallback default fee
-        return 500 
+        return 99999 # Return a fake, obvious number so you know it failed auth
 
-    # 2. Use the Token to get the Quote
-    # Sandbox URL
     api_url = "https://sandbox.api.uber.com/v1/deliveries/quotes" 
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json"
-    }
-    
-    # NOTE: You MUST provide a real, valid US address string here for the API to accept it
+    # Keep using your environment variable address here
     payload = {
-        "pickup_address": "123 Main St, San Francisco, CA 94105", 
+        "pickup_address": os.getenv("UBER_PICKUP_ADDRESS", "123 Main St, San Francisco, CA 94105"), 
         "dropoff_location": {"lat": lat, "lng": lng}
     }
     
     try:
         response = requests.post(api_url, json=payload, headers=headers, timeout=5)
-        if response.status_code == 200:
-            data = response.json()
-            # Assuming Uber returns a fee field
-            delivery_price_dollars = float(data.get('fee', 5.00)) 
-            return int(round(delivery_price_dollars * 100))
-        else:
-            logging.error(f"Uber API error: {response.text}")
-            return 500
+        
+        # UNMASKING THE ERROR:
+        if response.status_code != 200:
+            print(f"🚨 UBER ERROR CODE: {response.status_code}")
+            print(f"🚨 UBER ERROR RESPONSE: {response.text}") # This text will tell you exactly why
+            return 88888 # Return an obvious failure number
+            
+        data = response.json()
+        return int(round(float(data.get('fee', 5.00)) * 100))
+        
     except Exception as e:
-        logging.error(f"Uber API connection failed: {str(e)}")
-        return 500
+        print(f"CRITICAL ERROR: {str(e)}")
+        return 77777 # Return an obvious failure number
 
 @payment_bp.route('/get-delivery-fee', methods=['POST'])
 def get_delivery_fee():
