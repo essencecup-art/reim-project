@@ -78,7 +78,9 @@ def get_uber_access_token():
 def get_delivery_quote_cents(lat, lng):
     token = get_uber_access_token()
     if not token:
-        return 99999 # Return a fake, obvious number so you know it failed auth
+        print("DEBUG: Forcing fake delivery fee of $12.50")
+        return 1250
+        #return 99999 # Return a fake, obvious number so you know it failed auth
 
     api_url = "https://sandbox.api.uber.com/v1/deliveries/quotes" 
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
