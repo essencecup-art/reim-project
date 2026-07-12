@@ -57,7 +57,7 @@
                 
                 <div class="card-body text-xs space-y-1 text-stone-400">
                     <p>Total Charge: <strong class="text-stone-200">${{ "%.2f"|format(order.total_amount / 100) }}</strong></p>
-                    <p>Updated: <span class="time-text font-mono">{{ order.updated_at.strftime('%H:%M:%S') }}</span></p>
+                    <p>Updated: <span class="time-text font-mono">{{ order.updated_at.strftime('%H:%M') if order.updated_at else '00:00' }}</span></p>
                 </div>
                 
                 <div class="action-buttons grid grid-cols-3 gap-2 pt-2 border-t border-stone-800/60 text-[10px] font-mono">
@@ -82,7 +82,7 @@
                     <span class="text-sm font-mono font-bold text-amber-500 bg-stone-950 px-2 py-0.5 border border-stone-800 rounded">
                         Table {{ order.table_number if order.table_number else "00" }}
                     </span>
-                    <span class="text-[10px] font-mono text-stone-500">{{ order.created_at.strftime('%I:%M %p') }}</span>
+                    <span class="text-[10px] font-mono text-stone-500">{{ order.created_at.strftime('%H:%M') if order.created_at else '00:00' }}</span>
                     <span class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded font-mono font-bold 
                         {% if order.status == 'Paid' %}bg-blue-500/10 text-blue-400{% elif order.status == 'Preparing' %}bg-amber-500/10 text-amber-500{% elif order.status == 'Completed' %}bg-emerald-500/10 text-emerald-500{% else %}bg-rose-500/10 text-rose-500{% endif %}">
                         {{ order.status }}

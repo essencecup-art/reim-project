@@ -87,7 +87,7 @@ def orders_stream():
             'status': o.status,
             'payment_method': o.payment_method,
             'amount': f"${o.total_amount / 100:.2f}",
-            'time': o.created_at.strftime('%I:%M %p')
+            'time': o.created_at.strftime('%H:%M') if o.created_at else "00:00"
         })
         
     # Calculate live counters so frontend JavaScript can dynamically re-render metrics cards
@@ -191,7 +191,7 @@ def kitchen_stream():
             'table': t.table_number if t.table_number else "00",
             'description': t.description,
             'status': t.status,
-            'time': t.created_at.strftime('%I:%M %p')
+            'time': t.created_at.strftime('%H:%M') if t.created_at else "00:00"
         })
         
     return jsonify({'orders': tickets_data})
