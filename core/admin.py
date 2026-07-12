@@ -47,13 +47,13 @@ def dashboard():
         current_year = now.year
         current_month = now.month
         
-        gross_revenue = db.session.query(func.sum(Order.total_amount)).filter(Order.status != 'Cancelled').scalar() or 0
+        gross_revenue = (db.session.query(func.sum(Order.total_amount)).filter(Order.status != 'Cancelled').scalar() or 0) / 100
         
-        monthly_revenue = db.session.query(func.sum(Order.total_amount)).filter(
+        monthly_revenue = (db.session.query(func.sum(Order.total_amount)).filter(
             Order.status != 'Cancelled',
             extract('year', Order.created_at) == current_year,
             extract('month', Order.created_at) == current_month
-        ).scalar() or 0
+        ).scalar() or 0) / 100
 
         pending_count = db.session.query(func.count(Order.id)).filter(
             ~Order.status.in_(['Cancelled', 'Completed'])
