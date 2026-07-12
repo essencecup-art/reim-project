@@ -3,8 +3,9 @@ from flask import Blueprint, render_template, jsonify, flash, redirect, url_for,
 from core.models import Order, User
 from core.extensions import db
 from functools import wraps
-from sqlalchemy import func
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy import func, extract
+from sqlalchemy.orm import selectinload
+
 
 # Split into separate blueprint contexts
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
@@ -49,8 +50,8 @@ def dashboard():
     
     monthly_revenue = db.session.query(func.sum(Order.total_amount)).filter(
         Order.status != 'Cancelled',
-        Order.created_at.year == current_year,
-        Order.created_at.month == current_month
+        extract('year',Order.created_at) == current_year,
+        extract('month',Order.created_at.month) == current_month
     ).scalar() or 0
 
     pending_count = db.session.query(func.count(Order.id)).filter(
@@ -163,6 +164,7 @@ def kitchen_feed():
             Order.status.in_(['Paid', 'Preparing', 'Pending Cash Payment', 'active', 'reserved'])
         ).order_by(Order.created_at.asc()).all()
 
+    
     # Pass the filtered orders AND the current view mode back to the HTML template
     return render_template('kitchen_feed.html', orders=orders, current_view=view_mode)
 
