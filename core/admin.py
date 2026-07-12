@@ -55,7 +55,7 @@ def dashboard():
     ).scalar() or 0
 
     pending_count = db.session.query(func.count(Order.id)).filter(
-        Order.status.notin_(['Cancelled', 'Completed'])
+        ~Order.status.in_(['Cancelled', 'Completed'])
     ).scalar() or 0
 
     return render_template(
@@ -94,11 +94,12 @@ def orders_stream():
     gross_revenue_calc = db.session.query(func.sum(Order.total_amount)).filter(Order.status != 'Cancelled').scalar() or 0
     monthly_revenue_calc = db.session.query(func.sum(Order.total_amount)).filter(
         Order.status != 'Cancelled',
-        Order.created_at.year == current_year,
-        Order.created_at.month == current_month
+        extract('year',Order.created_at) == current_year,
+        extract('month',Order.created_at) == current_month
     ).scalar() or 0
+    
     pending_calc = db.session.query(func.count(Order.id)).filter(
-        Order.status.notin_(['Cancelled', 'Completed'])
+        ~Order.status.in_(['Cancelled', 'Completed'])
     ).scalar() or 0
 
     return jsonify({
