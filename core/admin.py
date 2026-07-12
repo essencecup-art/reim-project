@@ -5,7 +5,7 @@ from core.extensions import db
 from functools import wraps
 from sqlalchemy import func, extract
 from sqlalchemy.orm import selectinload
-
+import traceback
 
 # Split into separate blueprint contexts
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
@@ -39,33 +39,38 @@ def staff_required(f):
 @admin_bp.route('/dashboard')
 @admin_required
 def dashboard():
-    """Purely financial and high-level tracking for the owner."""
-    all_orders = Order.query.options(selectinload(Order.items)).order_by(Order.created_at.desc()).all()
-    
-    now = datetime.now()
-    current_year = now.year
-    current_month = now.month
-    
-    gross_revenue = db.session.query(func.sum(Order.total_amount)).filter(Order.status != 'Cancelled').scalar() or 0
-    
-    monthly_revenue = db.session.query(func.sum(Order.total_amount)).filter(
-        Order.status != 'Cancelled',
-        extract('year',Order.created_at) == current_year,
-        extract('month',Order.created_at.month) == current_month
-    ).scalar() or 0
+    try:
+        # We put your exact logic inside a try block
+        all_orders = Order.query.options(selectinload(Order.items)).order_by(Order.created_at.desc()).all()
+        
+        now = datetime.now()
+        current_year = now.year
+        current_month = now.month
+        
+        gross_revenue = db.session.query(func.sum(Order.total_amount)).filter(Order.status != 'Cancelled').scalar() or 0
+        
+        monthly_revenue = db.session.query(func.sum(Order.total_amount)).filter(
+            Order.status != 'Cancelled',
+            extract('year', Order.created_at) == current_year,
+            extract('month', Order.created_at) == current_month
+        ).scalar() or 0
 
-    pending_count = db.session.query(func.count(Order.id)).filter(
-        ~Order.status.in_(['Cancelled', 'Completed'])
-    ).scalar() or 0
+        pending_count = db.session.query(func.count(Order.id)).filter(
+            ~Order.status.in_(['Cancelled', 'Completed'])
+        ).scalar() or 0
 
-    return render_template(
-        'admin_dashboard.html', 
-        orders=all_orders,
-        revenue=gross_revenue,
-        monthly_revenue=monthly_revenue,
-        pending=pending_count,
-        total_orders_count=len(all_orders)
-    )
+        return render_template(
+            'admin_dashboard.html', 
+            orders=all_orders,
+            revenue=gross_revenue,
+            monthly_revenue=monthly_revenue,
+            pending=pending_count,
+            total_orders_count=len(all_orders)
+        )
+    except Exception as e:
+        # If ANYTHING crashes, it catches the error and prints it to your browser instead of a 500 page
+        error_trace = traceback.format_exc()
+        return f"<h1>Backend Crash Report</h1><pre style='background:#111; color:#0f0; padding:20px;'>{error_trace}</pre>"
 
 
 @admin_bp.route('/api/orders/stream')
