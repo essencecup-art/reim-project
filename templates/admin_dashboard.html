@@ -19,13 +19,13 @@
         <!-- Card 1: Monthly Gross Revenue -->
         <div class="p-6 bg-stone-900 border border-amber-500/20 rounded-xl space-y-2">
             <span class="text-[10px] uppercase tracking-widest font-mono text-amber-500 block">Monthly Gross Sales</span>
-            <span id="metric-monthly-revenue" class="text-3xl font-mono font-bold text-amber-500">${{ "%.2f"|format(monthly_revenue / 100) }}</span>
+            <span id="metric-monthly-revenue" class="text-3xl font-mono font-bold text-amber-500">${{ "{:,.0f}".format(monthly_revenue / 100) }}</span>
         </div>
 
         <!-- Card 2: Total Gross Sales (All Time) -->
         <div class="p-6 bg-stone-900 border border-stone-800 rounded-xl space-y-2">
             <span class="text-[10px] uppercase tracking-widest font-mono text-stone-500 block">Total Gross Sales (All Time)</span>
-            <span id="metric-gross-revenue" class="text-3xl font-mono font-bold text-stone-100">${{ "%.2f"|format(revenue / 100) }}</span>
+            <span id="metric-gross-revenue" class="text-3xl font-mono font-bold text-stone-100">${{ "{:,.0f}".format(revenue / 100) }} </span>
         </div>
 
         <!-- Card 3: Active Tickets -->
