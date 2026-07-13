@@ -59,10 +59,9 @@
                     <p>Timestamp: <span class="time-text font-mono text-stone-400">{{ order.created_at.strftime('%H:%M') if order.created_at else '00:00' }}</span></p>
                 </div>
                 
-                <div class="action-buttons grid grid-cols-3 gap-2 pt-2 border-t border-stone-800/60 text-[10px] font-mono">
-                    <button class="btn p-2 rounded text-center bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border border-amber-500/20 transition duration-150" data-id="{{ order.id }}" data-status="Preparing">Approve</button>
-                    <button class="btn p-2 rounded text-center bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border border-emerald-500/20 transition duration-150" data-id="{{ order.id }}" data-status="Completed">Complete</button>
-                    <button class="btn p-2 rounded text-center bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 border border-rose-500/20 transition duration-150" data-id="{{ order.id }}" data-status="Cancelled">Void</button>
+                <div class="action-buttons grid grid-cols-2 gap-2 pt-2 border-t border-stone-800/60 text-[10px] font-mono">
+                    <button class="btn p-2 rounded text-center bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border border-emerald-500/20 transition duration-150" data-id="${order.id}" data-status="Completed">Settle Invoice</button>
+                    <button class="btn p-2 rounded text-center bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 border border-rose-500/20 transition duration-150" data-id="${order.id}" data-status="Cancelled">Void</button>
                 </div>
             </div>
             {% endfor %}

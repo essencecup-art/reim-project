@@ -41,7 +41,8 @@ def staff_required(f):
 def dashboard():
     try:
         # FILTER: Only pull confirmed invoices/inquiries (hide unverified checkouts)
-        all_orders = Order.query.filter(Order.status != 'Pending').options(selectinload(Order.items)).order_by(Order.created_at.desc()).all()
+        # ONLY pull invoices that are active/open (Paid or Preparing)
+        all_orders = Order.query.filter(Order.status.in_(['Paid', 'reserved'])).options(selectinload(Order.items)).order_by(Order.created_at.desc()).all()
         
         now = datetime.now()
         current_year = now.year
@@ -81,8 +82,9 @@ def dashboard():
 def orders_stream():
     """API stream providing verified financial invoices to the ledger."""
     # FILTER: Exclude raw uncompleted checkout sessions
-    orders = Order.query.filter(Order.status != 'Pending').options(selectinload(Order.items)).order_by(Order.created_at.desc()).all()
-    
+    # Stream only the active queue to the frontend ledger
+    orders = Order.query.filter(Order.status.in_(['Paid', 'reserved'])).options(selectinload(Order.items)).order_by(Order.created_at.desc()).all()    
+
     now = datetime.now()
     current_year = now.year
     current_month = now.month
