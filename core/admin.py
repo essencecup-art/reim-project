@@ -40,23 +40,27 @@ def staff_required(f):
 @admin_required
 def dashboard():
     try:
-        # We put your exact logic inside a try block
-        all_orders = Order.query.options(selectinload(Order.items)).order_by(Order.created_at.desc()).all()
+        # FILTER: Only pull confirmed invoices/inquiries (hide unverified checkouts)
+        all_orders = Order.query.filter(Order.status != 'Pending').options(selectinload(Order.items)).order_by(Order.created_at.desc()).all()
         
         now = datetime.now()
         current_year = now.year
         current_month = now.month
         
-        gross_revenue = (db.session.query(func.sum(Order.total_amount)).filter(Order.status != 'Cancelled').scalar() or 0) / 100
+        # Financial Guard: Revenue must only sum actual paid/completed transactions
+        gross_revenue = (db.session.query(func.sum(Order.total_amount)).filter(
+            Order.status.in_(['Paid', 'Preparing', 'Completed'])
+        ).scalar() or 0) / 100
         
         monthly_revenue = (db.session.query(func.sum(Order.total_amount)).filter(
-            Order.status != 'Cancelled',
+            Order.status.in_(['Paid', 'Preparing', 'Completed']),
             extract('year', Order.created_at) == current_year,
             extract('month', Order.created_at) == current_month
         ).scalar() or 0) / 100
 
+        # Pending inquiries that need operational fulfilment
         pending_count = db.session.query(func.count(Order.id)).filter(
-            ~Order.status.in_(['Cancelled', 'Completed'])
+            Order.status.in_(['Paid', 'Preparing'])
         ).scalar() or 0
 
         return render_template(
@@ -68,7 +72,6 @@ def dashboard():
             total_orders_count=len(all_orders)
         )
     except Exception as e:
-        # If ANYTHING crashes, it catches the error and prints it to your browser instead of a 500 page
         error_trace = traceback.format_exc()
         return f"<h1>Backend Crash Report</h1><pre style='background:#111; color:#0f0; padding:20px;'>{error_trace}</pre>"
 
@@ -76,8 +79,9 @@ def dashboard():
 @admin_bp.route('/api/orders/stream')
 @admin_required
 def orders_stream():
-    """API endpoint providing the live background polling data stream for admins."""
-    orders = Order.query.options(selectinload(Order.items)).order_by(Order.created_at.desc()).all()
+    """API stream providing verified financial invoices to the ledger."""
+    # FILTER: Exclude raw uncompleted checkout sessions
+    orders = Order.query.filter(Order.status != 'Pending').options(selectinload(Order.items)).order_by(Order.created_at.desc()).all()
     
     now = datetime.now()
     current_year = now.year
@@ -95,19 +99,17 @@ def orders_stream():
             'time': o.created_at.strftime('%H:%M') if o.created_at else "00:00"
         })
         
-    # FIX: Divide by 100 here to convert raw cents to dollars before sending to JS
-    gross_revenue_calc = (db.session.query(func.sum(Order.total_amount)).filter(Order.status != 'Cancelled').scalar() or 0) / 100
+    gross_revenue_calc = (db.session.query(func.sum(Order.total_amount)).filter(Order.status.in_(['Paid', 'Preparing', 'Completed'])).scalar() or 0) / 100
     monthly_revenue_calc = (db.session.query(func.sum(Order.total_amount)).filter(
-        Order.status != 'Cancelled',
+        Order.status.in_(['Paid', 'Preparing', 'Completed']),
         extract('year', Order.created_at) == current_year,
         extract('month', Order.created_at) == current_month
     ).scalar() or 0) / 100
     
     pending_calc = db.session.query(func.count(Order.id)).filter(
-        ~Order.status.in_(['Cancelled', 'Completed'])
+        Order.status.in_(['Paid', 'Preparing'])
     ).scalar() or 0
 
-    # Return raw numbers so JavaScript can format them beautifully
     return jsonify({
         'orders': orders_data,
         'revenue': gross_revenue_calc,

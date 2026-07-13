@@ -1,54 +1,51 @@
 {% extends 'base.html' %}
 
-{% block title %}Admin Dashboard | LuxeEats{% endblock %}
+{% block title %}Invoice Ledger | LuxeEats{% endblock %}
 
 {% block content %}
 <div class="space-y-10">
     <div class="border-b border-stone-800 pb-4 flex justify-between items-end">
         <div>
-            <h1 class="text-3xl font-extrabold tracking-tight text-stone-100">Kitchen Command</h1>
-            <p class="text-stone-400 text-sm mt-1">Live restaurant monitoring and transaction ledger.</p>
+            <h1 class="text-3xl font-extrabold tracking-tight text-stone-100">Invoice & Inquiry Ledger</h1>
+            <p class="text-stone-400 text-sm mt-1">Verified transactions and corporate buyout tracking.</p>
         </div>
         <div class="font-mono text-xs text-amber-500/70 uppercase tracking-widest bg-stone-900 px-3 py-1.5 border border-stone-800 rounded-md animate-pulse">
-            ● Live Sync Active
+            ● Secure Ledger Active
         </div>
     </div>
 
     <!-- Live Metrics Counter Row -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <!-- Card 1: Monthly Gross Revenue -->
         <div class="p-6 bg-stone-900 border border-amber-500/20 rounded-xl space-y-2">
             <span class="text-[10px] uppercase tracking-widest font-mono text-amber-500 block">Monthly Gross Sales</span>
             <span id="metric-monthly-revenue" class="text-3xl font-mono font-bold text-amber-500">${{ "{:,.0f}".format(monthly_revenue) }}</span>
         </div>
 
-        <!-- Card 2: Total Gross Sales (All Time) -->
         <div class="p-6 bg-stone-900 border border-stone-800 rounded-xl space-y-2">
-            <span class="text-[10px] uppercase tracking-widest font-mono text-stone-500 block">Total Gross Sales (All Time)</span>
+            <span class="text-[10px] uppercase tracking-widest font-mono text-stone-500 block">Total Revenue (All Time)</span>
             <span id="metric-gross-revenue" class="text-3xl font-mono font-bold text-stone-100">${{ "{:,.0f}".format(revenue) }}</span>
         </div>
 
-        <!-- Card 3: Active Tickets -->
         <div class="p-6 bg-stone-900 border border-stone-800 rounded-xl space-y-2">
-            <span class="text-[10px] uppercase tracking-widest font-mono text-stone-500 block">Active Kitchen Tickets</span>
+            <span class="text-[10px] uppercase tracking-widest font-mono text-stone-500 block">Open Inquiries</span>
             <span id="metric-pending-count" class="text-3xl font-mono font-bold text-stone-100">{{ pending }}</span>
         </div>
 
-        <!-- Card 4: Total Orders Processed -->
         <div class="p-6 bg-stone-900 border border-stone-800 rounded-xl space-y-2">
-            <span class="text-[10px] uppercase tracking-widest font-mono text-stone-500 block">Total Orders Processed</span>
+            <span class="text-[10px] uppercase tracking-widest font-mono text-stone-500 block">Settled Invoices</span>
             <span id="metric-total-count" class="text-3xl font-mono font-bold text-stone-100">{{ total_orders_count }}</span>
         </div>
     </div>
 
-    <div class="admin-dashboard-content bg-stone-900/40 p-6 border border-stone-800/80 rounded-xl space-y-4">
-        <h2 class="text-xs uppercase tracking-widest font-mono text-stone-400">Live Kitchen Dashboard Feed</h2>
+    <!-- Cleaned Central Grid -->
+    <div class="bg-stone-900/40 p-6 border border-stone-800/80 rounded-xl space-y-4">
+        <h2 class="text-xs uppercase tracking-widest font-mono text-stone-400">Verified Statements Archive</h2>
         
         <div class="orders-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {% for order in orders %}
             <div class="order-card p-5 bg-stone-900 border border-stone-800 rounded-xl space-y-4 flex flex-col justify-between" id="order-card-{{ order.id }}">
                 <div class="card-header flex justify-between items-center border-b border-stone-800 pb-2">
-                    <h3 class="text-sm font-mono font-bold text-stone-200">Order #{{ order.id }}</h3>
+                    <h3 class="text-sm font-mono font-bold text-stone-200">Invoice #{{ order.id }}</h3>
                     <span class="status-badge text-[10px] uppercase font-mono font-bold px-2 py-0.5 rounded tracking-wider bg-stone-950 border border-stone-800
                         {% if order.status == 'Paid' %}text-blue-400{% elif order.status == 'Preparing' %}text-amber-400{% elif order.status == 'Completed' %}text-emerald-400{% else %}text-rose-400{% endif %}">
                         {{ order.status }}
@@ -56,197 +53,102 @@
                 </div>
                 
                 <div class="card-body text-xs space-y-1 text-stone-400">
-                    <p>Total Charge: <strong class="text-stone-200">${{ "%.2f"|format(order.total_amount / 100) }}</strong></p>
-                    <p>Updated: <span class="time-text font-mono">{{ order.updated_at.strftime('%H:%M') if order.updated_at else '00:00' }}</span></p>
+                    <p class="text-stone-300 font-mono mb-2">Item: {{ order.description }}</p>
+                    <p>Settlement: <span class="uppercase font-mono text-stone-300">{{ order.payment_method }}</span></p>
+                    <p>Total Statement: <strong class="text-stone-100">${{ "%.2f"|format(order.total_amount / 100) }}</strong></p>
+                    <p>Timestamp: <span class="time-text font-mono text-stone-400">{{ order.created_at.strftime('%H:%M') if order.created_at else '00:00' }}</span></p>
                 </div>
                 
                 <div class="action-buttons grid grid-cols-3 gap-2 pt-2 border-t border-stone-800/60 text-[10px] font-mono">
-                    <button class="btn p-2 rounded text-center bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border border-amber-500/20 transition duration-150" data-id="{{ order.id }}" data-status="Preparing">Cook</button>
+                    <button class="btn p-2 rounded text-center bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border border-amber-500/20 transition duration-150" data-id="{{ order.id }}" data-status="Preparing">Approve</button>
                     <button class="btn p-2 rounded text-center bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border border-emerald-500/20 transition duration-150" data-id="{{ order.id }}" data-status="Completed">Complete</button>
-                    <button class="btn p-2 rounded text-center bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 border border-rose-500/20 transition duration-150" data-id="{{ order.id }}" data-status="Cancelled">Cancel</button>
+                    <button class="btn p-2 rounded text-center bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 border border-rose-500/20 transition duration-150" data-id="{{ order.id }}" data-status="Cancelled">Void</button>
                 </div>
             </div>
             {% endfor %}
         </div>
     </div>
-
-    <div class="space-y-4">
-        <h3 class="text-xs uppercase tracking-widest font-mono text-stone-400">Order Dispatch Stream</h3>
-    </div>
-    
-    <div id="order-stream-container" class="space-y-3">
-        {% for order in orders %}
-        <div class="p-5 bg-stone-900 border {% if order.status in ['Paid', 'Preparing'] %}border-amber-500/20{% else %}border-stone-800{% endif %} rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4 transition hover:border-stone-700">
-            <div class="space-y-1 max-w-xl">
-                <div class="flex items-center gap-3">
-                    <span class="text-sm font-mono font-bold text-amber-500 bg-stone-950 px-2 py-0.5 border border-stone-800 rounded">
-                        Table {{ order.table_number if order.table_number else "00" }}
-                    </span>
-                    <span class="text-[10px] font-mono text-stone-500">{{ order.created_at.strftime('%H:%M') if order.created_at else '00:00' }}</span>
-                    <span class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded font-mono font-bold 
-                        {% if order.status == 'Paid' %}bg-blue-500/10 text-blue-400{% elif order.status == 'Preparing' %}bg-amber-500/10 text-amber-500{% elif order.status == 'Completed' %}bg-emerald-500/10 text-emerald-500{% else %}bg-rose-500/10 text-rose-500{% endif %}">
-                        {{ order.status }}
-                    </span>
-                </div>
-                <p class="text-sm text-stone-200 font-medium tracking-wide">{{ order.description }}</p>
-            </div>
-            
-            <div class="flex items-center justify-between md:justify-end gap-6 border-t md:border-0 border-stone-800 pt-3 md:pt-0">
-                <div class="text-left md:text-right">
-                    <span class="text-[10px] uppercase tracking-widest font-mono text-stone-500 block">Settlement</span>
-                    <span class="text-xs font-mono font-bold text-stone-300 uppercase">{{ order.payment_method }}</span>
-                </div>
-                <div class="text-right">
-                    <span class="text-[10px] uppercase tracking-widest font-mono text-stone-500 block">Amount</span>
-                    <span class="text-lg font-mono font-bold text-stone-100">${{ "%.2f"|format(order.total_amount / 100) }}</span>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
 </div>
 
 <script>
-// Format numbers as currency with no decimals for high-end look ($3,425)
 const currencyFormatter = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0
+    style: 'currency', currency: 'USD', maximumFractionDigits: 0
 });
 
-async function updateDashboardStream() {
+async function updateInvoiceLedger() {
     try {
         const response = await fetch('/admin/api/orders/stream');
         const data = await response.json();
         
-        // Update metric counters smoothly using the currency formatter
         document.getElementById('metric-monthly-revenue').innerText = currencyFormatter.format(data.monthly_revenue);
         document.getElementById('metric-gross-revenue').innerText = currencyFormatter.format(data.revenue);
         document.getElementById('metric-pending-count').innerText = data.pending;
         document.getElementById('metric-total-count').innerText = data.total_orders_count;
         
         const gridContainer = document.querySelector('.orders-grid');
-        const streamContainer = document.getElementById('order-stream-container');
-        
+        if (!gridContainer) return;
+
         if (!data.orders || data.orders.length === 0) {
-            if (gridContainer) gridContainer.innerHTML = '';
-            streamContainer.innerHTML = `<div class="p-12 text-center bg-stone-900/30 border border-stone-800/50 rounded-xl text-stone-500 text-sm italic font-mono">No transactions recorded yet.</div>`;
+            gridContainer.innerHTML = `<div class="p-12 text-center col-span-full bg-stone-900/30 border border-stone-800/50 rounded-xl text-stone-500 text-sm italic font-mono">No verified invoices found.</div>`;
             return;
         }
 
-        // --- SECTION 1: RECONCILE ACTIONABLE GRID CARDS ---
-        if (gridContainer) {
-            const incomingIds = data.orders.map(o => o.id);
-            const currentCards = Array.from(gridContainer.querySelectorAll('.order-card'));
-            const currentIds = currentCards.map(card => parseInt(card.id.replace('order-card-', '')));
+        const incomingIds = data.orders.map(o => o.id);
+        const currentCards = Array.from(gridContainer.querySelectorAll('.order-card'));
+        const currentIds = currentCards.map(card => parseInt(card.id.replace('order-card-', '')));
 
-            // Purge removed order cards safely
-            currentIds.forEach(id => {
-                if (!incomingIds.includes(id)) {
-                    const cardToRemove = document.getElementById(`order-card-${id}`);
-                    if (cardToRemove) cardToRemove.remove();
-                }
-            });
+        currentIds.forEach(id => {
+            if (!incomingIds.includes(id)) {
+                const cardToRemove = document.getElementById(`order-card-${id}`);
+                if (cardToRemove) cardToRemove.remove();
+            }
+        });
 
-            // Upsert remaining/new cards
-            data.orders.forEach(order => {
-                const existingCard = document.getElementById(`order-card-${order.id}`);
-                
-                let badgeColor = 'text-rose-400';
-                if (order.status === 'Paid') badgeColor = 'text-blue-400';
-                else if (order.status === 'Preparing') badgeColor = 'text-amber-400';
-                else if (order.status === 'Completed') badgeColor = 'text-emerald-400';
+        data.orders.forEach(order => {
+            const existingCard = document.getElementById(`order-card-${order.id}`);
+            
+            let badgeColor = 'text-rose-400';
+            if (order.status === 'Paid') badgeColor = 'text-blue-400';
+            else if (order.status === 'Preparing') badgeColor = 'text-amber-400';
+            else if (order.status === 'Completed') badgeColor = 'text-emerald-400';
 
-                if (existingCard) {
-                    const badge = existingCard.querySelector('.status-badge');
-                    if (badge && badge.innerText !== order.status.toUpperCase()) {
-                        badge.innerText = order.status.toUpperCase();
-                        badge.className = `status-badge text-[10px] uppercase font-mono font-bold px-2 py-0.5 rounded tracking-wider bg-stone-950 border border-stone-800 ${badgeColor}`;
-                    }
-                    const timeText = existingCard.querySelector('.time-text');
-                    if (timeText && timeText.innerText !== order.time) {
-                        timeText.innerText = order.time;
-                    }
-                } else {
-                    const cardHTML = `
-                        <div class="order-card p-5 bg-stone-900 border border-stone-800 rounded-xl space-y-4 flex flex-col justify-between" id="order-card-${order.id}">
-                            <div class="card-header flex justify-between items-center border-b border-stone-800 pb-2">
-                                <h3 class="text-sm font-mono font-bold text-stone-200">Order #${order.id}</h3>
-                                <span class="status-badge text-[10px] uppercase font-mono font-bold px-2 py-0.5 rounded tracking-wider bg-stone-950 border border-stone-800 ${badgeColor}">
-                                    ${order.status}
-                                </span>
-                            </div>
-                            <div class="card-body text-xs space-y-1 text-stone-400">
-                                <p>Total Charge: <strong class="text-stone-200">${order.amount}</strong></p>
-                                <p>Updated: <span class="time-text font-mono">${order.time}</span></p>
-                            </div>
-                            <div class="action-buttons grid grid-cols-3 gap-2 pt-2 border-t border-stone-800/60 text-[10px] font-mono">
-                                <button class="btn p-2 rounded text-center bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border border-amber-500/20 transition duration-150" data-id="${order.id}" data-status="Preparing">Cook</button>
-                                <button class="btn p-2 rounded text-center bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border border-emerald-500/20 transition duration-150" data-id="${order.id}" data-status="Completed">Complete</button>
-                                <button class="btn p-2 rounded text-center bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 border border-rose-500/20 transition duration-150" data-id="${order.id}" data-status="Cancelled">Cancel</button>
-                            </div>
-                        </div>`;
-                    gridContainer.insertAdjacentHTML('beforeend', cardHTML);
+            if (existingCard) {
+                const badge = existingCard.querySelector('.status-badge');
+                if (badge && badge.innerText !== order.status.toUpperCase()) {
+                    badge.innerText = order.status.toUpperCase();
+                    badge.className = `status-badge text-[10px] uppercase font-mono font-bold px-2 py-0.5 rounded tracking-wider bg-stone-950 border border-stone-800 ${badgeColor}`;
                 }
-            });
-        }
-        
-        // --- SECTION 2: RECONCILE LOWER STREAM WITHOUT TOTAL BLANKING ---
-        if (streamContainer) {
-            // Assign unique IDs to the stream blocks to handle them safely without wiping innerHTML
-            const streamItems = data.orders.map(order => {
-                let statusClass = 'bg-rose-500/10 text-rose-500';
-                let borderClass = 'border-stone-800';
-                
-                if (order.status === 'Paid') {
-                    statusClass = 'bg-blue-500/10 text-blue-400';
-                    borderClass = 'border-amber-500/20';
-                } else if (order.status === 'Preparing') {
-                    statusClass = 'bg-amber-500/10 text-amber-500';
-                    borderClass = 'border-amber-500/20';
-                } else if (order.status === 'Completed') {
-                    statusClass = 'bg-emerald-500/10 text-emerald-500';
-                }
-                
-                return `
-                    <div id="stream-row-${order.id}" class="p-5 bg-stone-900 border ${borderClass} rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4 transition hover:border-stone-700">
-                        <div class="space-y-1 max-w-xl">
-                            <div class="flex items-center gap-3">
-                                <span class="text-sm font-mono font-bold text-amber-500 bg-stone-950 px-2 py-0.5 border border-stone-800 rounded">Table ${order.table}</span>
-                                <span class="text-[10px] font-mono text-stone-500">${order.time}</span>
-                                <span class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded font-mono font-bold ${statusClass}">${order.status}</span>
-                            </div>
-                            <p class="text-sm text-stone-200 font-medium tracking-wide">${order.description}</p>
+            } else {
+                const cardHTML = `
+                    <div class="order-card p-5 bg-stone-900 border border-stone-800 rounded-xl space-y-4 flex flex-col justify-between" id="order-card-${order.id}">
+                        <div class="card-header flex justify-between items-center border-b border-stone-800 pb-2">
+                            <h3 class="text-sm font-mono font-bold text-stone-200">Invoice #${order.id}</h3>
+                            <span class="status-badge text-[10px] uppercase font-mono font-bold px-2 py-0.5 rounded tracking-wider bg-stone-950 border border-stone-800 ${badgeColor}">
+                                ${order.status}
+                            </span>
                         </div>
-                        <div class="flex items-center justify-between md:justify-end gap-6 border-t md:border-0 border-stone-800 pt-3 md:pt-0">
-                            <div class="text-left md:text-right">
-                                <span class="text-[10px] uppercase tracking-widest font-mono text-stone-500 block">Settlement</span>
-                                <span class="text-xs font-mono font-bold text-stone-300 uppercase">${order.payment_method}</span>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-[10px] uppercase tracking-widest font-mono text-stone-500 block">Amount</span>
-                                <span class="text-lg font-mono font-bold text-stone-100">${order.amount}</span>
-                            </div>
+                        <div class="card-body text-xs space-y-1 text-stone-400">
+                            <p class="text-stone-300 font-mono mb-2">Item: ${order.description}</p>
+                            <p>Settlement: <span class="uppercase font-mono text-stone-300">${order.payment_method}</span></p>
+                            <p>Total Statement: <strong class="text-stone-100">${order.amount}</strong></p>
+                            <p>Timestamp: <span class="time-text font-mono text-stone-400">${order.time}</span></p>
+                        </div>
+                        <div class="action-buttons grid grid-cols-3 gap-2 pt-2 border-t border-stone-800/60 text-[10px] font-mono">
+                            <button class="btn p-2 rounded text-center bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border border-amber-500/20 transition duration-150" data-id="${order.id}" data-status="Preparing">Approve</button>
+                            <button class="btn p-2 rounded text-center bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border border-emerald-500/20 transition duration-150" data-id="${order.id}" data-status="Completed">Complete</button>
+                            <button class="btn p-2 rounded text-center bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 border border-rose-500/20 transition duration-150" data-id="${order.id}" data-status="Cancelled">Void</button>
                         </div>
                     </div>`;
-            }).join('');
-            
-            // Only update DOM structure if data string changed to completely kill layout flickering
-            if (streamContainer.dataset.lastRender !== streamItems) {
-                streamContainer.innerHTML = streamItems;
-                streamContainer.dataset.lastRender = streamItems;
+                gridContainer.insertAdjacentHTML('afterbegin', cardHTML);
             }
-        }
-        
+        });
     } catch (error) {
-        console.error("Error refreshing active ledger streams:", error);
+        console.error("Error updates on financial structures:", error);
     }
 }
 
-// Check feed every 8 seconds instead of 3 to stabilize network overhead
-setInterval(updateDashboardStream, 8000);
+setInterval(updateInvoiceLedger, 8000);
 
-// Use Event Delegation to listen for kitchen clicks safely
 document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('click', function(event) {
         const button = event.target.closest('.btn');
@@ -260,16 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ chef_status: targetStatus })
         })
-        .then(response => {
-            if (response.ok) return response.json();
-            return response.json().then(err => { throw new Error(err.error); });
-        })
-        .then(data => {
-            updateDashboardStream();
-        })
-        .catch(error => {
-            alert(`Action Blocked: ${error.message}`);
-        });
+        .then(response => { if (response.ok) updateInvoiceLedger(); });
     });
 });
 </script>
