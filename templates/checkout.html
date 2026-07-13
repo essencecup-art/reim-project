@@ -28,7 +28,6 @@
                 <option value="Dine-In">Dine-In (Eat at Restaurant)</option>
                 <option value="Reservation">📅 Future Reservation (Pre-order Menu)</option>
                 <option value="Takeaway">Takeaway (Pick Up)</option>
-                <!-- Disable it so they can see it, but can't click it during the demo -->
                 <option value="Delivery" disabled>🚚 Automated Delivery (Integration Coming Soon)</option>
             </select>   
         </div>
@@ -39,22 +38,34 @@
             <input type="text" name="table_number" id="table_number" placeholder="e.g. 04" class="w-full bg-stone-900 border border-stone-800 rounded-lg p-3 text-stone-100 font-mono focus:outline-none focus:border-amber-500">
         </div>
 
-        <!-- Dynamic Reservation Time Input -->
-        <div id="reservation-time-container" class="hidden space-y-4">
+        <!-- Dynamic Reservation Input Area (Reconstructed to fix data flow) -->
+        <div id="reservation-time-container" class="hidden bg-stone-950 border border-stone-800 rounded-xl p-5 space-y-4 my-6">
             <div>
-                <label class="text-xs uppercase tracking-widest font-mono text-stone-400 block mb-2">Guest Name</label>
-                <input type="text" name="guest_name" id="guest_name" placeholder="e.g., Alexander Wright" class="w-full bg-stone-900 border border-stone-800 rounded-lg p-3 text-stone-100 font-mono focus:outline-none focus:border-amber-500">
+                <h3 class="text-sm font-bold text-stone-200 tracking-tight">Reservation Logistics Details</h3>
+                <p class="text-stone-500 text-[11px] mt-0.5">Configure your private event or table window.</p>
             </div>
             
-            <div>
-                <label class="text-xs uppercase tracking-widest font-mono text-stone-400 block mb-2">Contact Phone</label>
-                <input type="tel" name="guest_contact" id="guest_contact" placeholder="e.g., +1 (555) 019-2834" class="w-full bg-stone-900 border border-stone-800 rounded-lg p-3 text-stone-100 font-mono focus:outline-none focus:border-amber-500">
-            </div>
+            <div class="space-y-3">
+                <!-- Guest Name -->
+                <div class="space-y-1">
+                    <label class="text-[10px] font-mono uppercase tracking-wider text-stone-400 block">Full Name</label>
+                    <input type="text" name="guest_name" placeholder="Alexander Wright"
+                        class="w-full bg-stone-900 border border-stone-800 text-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500 transition">
+                </div>
 
-            <div>
-                <label class="text-xs uppercase tracking-widest font-mono text-stone-400 block mb-2">Target Dinner Time</label>
-                <input type="datetime-local" name="reservation_time" id="reservation_time" class="w-full bg-stone-900 border border-stone-800 rounded-lg p-3 text-stone-100 font-mono focus:outline-none focus:border-amber-500 text-stone-300">
-                <p class="text-[11px] text-stone-500 font-mono mt-1.5">Ticket goes live on the kitchen feed automatically at this exact time.</p>
+                <!-- Contact Info -->
+                <div class="space-y-1">
+                    <label class="text-[10px] font-mono uppercase tracking-wider text-stone-400 block">Contact Phone / Email</label>
+                    <input type="text" name="guest_contact" placeholder="alex@corporate.com or (555) 019-2834"
+                        class="w-full bg-stone-900 border border-stone-800 text-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500 transition">
+                </div>
+
+                <!-- Date & Time Picker -->
+                <div class="space-y-1">
+                    <label class="text-[10px] font-mono uppercase tracking-wider text-stone-400 block">Target Event Date & Time</label>
+                    <input type="datetime-local" name="reservation_time"
+                        class="w-full bg-stone-900 border border-stone-800 text-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500 transition font-mono">
+                </div>
             </div>
         </div>
 
@@ -98,38 +109,38 @@
     let map;
     let marker;
 
-function initDeliveryMap() {
-    map = L.map('map').setView([10.7765, 106.7009], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap'
-    }).addTo(map);
+    function initDeliveryMap() {
+        map = L.map('map').setView([10.7765, 106.7009], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
 
-    marker = L.marker([10.7765, 106.7009], {draggable: true}).addTo(map);
+        marker = L.marker([10.7765, 106.7009], {draggable: true}).addTo(map);
 
-    marker.on('moveend', async function(e) {
-        const pos = marker.getLatLng();
-        document.getElementById('delivery_lat').value = pos.lat;
-        document.getElementById('delivery_lng').value = pos.lng;
+        marker.on('moveend', async function(e) {
+            const pos = marker.getLatLng();
+            document.getElementById('delivery_lat').value = pos.lat;
+            document.getElementById('delivery_lng').value = pos.lng;
 
-        try {
-            const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.lat}&lon=${pos.lng}&addressdetails=1`;
-            const response = await fetch(url);
-            const data = await response.json();
-            
-            if (data && data.display_name) {
-                document.getElementById('delivery_address').value = data.display_name;
-            } else {
-                document.getElementById('delivery_address').value = `Lat: ${pos.lat.toFixed(4)}, Lng: ${pos.lng.toFixed(4)}`;
+            try {
+                const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.lat}&lon=${pos.lng}&addressdetails=1`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data && data.display_name) {
+                    document.getElementById('delivery_address').value = data.display_name;
+                } else {
+                    document.getElementById('delivery_address').value = `Lat: ${pos.lat.toFixed(4)}, Lng: ${pos.lng.toFixed(4)}`;
+                }
+            } catch (err) {
+                console.error("❌ Geocoding failed:", err);
             }
-        } catch (err) {
-            console.error("❌ Geocoding failed:", err);
-        }
 
-        updateDeliveryFee(pos.lat, pos.lng);
-    });
+            updateDeliveryFee(pos.lat, pos.lng);
+        });
 
-    marker.fire('moveend');
-}
+        marker.fire('moveend');
+    }
 
     async function updateDeliveryFee(lat, lng) {
         const response = await fetch('/get-delivery-fee', {
@@ -142,14 +153,12 @@ function initDeliveryMap() {
         document.getElementById('fee-summary').classList.remove('hidden');
     }
 
-    // --- UPDATED LAYOUT TOGGLE LOGIC ---
     function toggleFulfillmentInputs() {
         const fulfillment = document.getElementById('fulfillment-select').value;
         const tableContainer = document.getElementById('table-number-container');
         const deliveryContainer = document.getElementById('delivery-address-container');
         const reservationContainer = document.getElementById('reservation-time-container');
         
-        // Hide all conditional inputs cleanly by default
         tableContainer.classList.add('hidden');
         deliveryContainer.classList.add('hidden');
         reservationContainer.classList.add('hidden');
@@ -160,10 +169,8 @@ function initDeliveryMap() {
         } else if (fulfillment === 'Dine-In') {
             tableContainer.classList.remove('hidden');
         } else if (fulfillment === 'Reservation') {
-            // Unmask the premium calendar picker state
             reservationContainer.classList.remove('hidden');
         }
-        // Takeaway leaves everything hidden, maintaining standard state clearance
     }
 
     function togglePaymentNotice() {

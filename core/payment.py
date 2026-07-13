@@ -13,9 +13,7 @@ UBER_CLIENT_SECRET = os.getenv("UBER_CLIENT_SECRET", "your_uber_client_secret")
 payment_bp = Blueprint('payment', __name__)
 
 def alert_staff_kitchen_terminal(order_id):
-    """
-    Registers a new active order alert for the kitchen staff system.
-    """
+    """Registers a new active order alert for the kitchen staff system."""
     try:
         logging.info(f"🚨 ALERT: New Cash Order #{order_id} sent to the kitchen terminal queue.")
         return True
@@ -24,39 +22,29 @@ def alert_staff_kitchen_terminal(order_id):
         return False
     
 def get_active_cart_total_cents():
-    """
-    Looks up the active cart items, calculates total, converts to cents.
-    """
+    """Looks up the active cart items, calculates total, converts to cents."""
     cart = session.get('cart', {})
     total_cents = 0
-    
     if not cart:
         return 0
-        
     for item_id, quantity in cart.items():
         item = MenuItem.query.get(int(item_id))
         if item:
             total_cents += int(item.price) * quantity
-            
     return total_cents
 
 def get_cart_items_description_string():
-    """
-    Generates a human-readable string of items for order description.
-    """
+    """Generates a human-readable string of items for order description."""
     cart = session.get('cart', {})
     item_descriptions = []
-    
     for item_id, quantity in cart.items():
         item = MenuItem.query.get(int(item_id))
         if item:
             item_descriptions.append(f"{quantity}x {item.name}")
-    
     return ', '.join(item_descriptions) if item_descriptions else "No items"
 
 def get_uber_access_token():
-    # Use the explicit Sandbox Auth URL
-    auth_url = "https://auth.uber.com/oauth/v2/token" # <--- IMPORTANT: Note the 'sandbox-' prefix
+    auth_url = "https://auth.uber.com/oauth/v2/token"
     payload = {
         "client_id": UBER_CLIENT_ID,
         "client_secret": UBER_CLIENT_SECRET,
@@ -68,7 +56,6 @@ def get_uber_access_token():
         if response.status_code == 200:
             return response.json().get('access_token')
         else:
-            # We now know this is where it's failing
             logging.error(f"Uber Auth Failed: {response.text}")
             return None
     except Exception as e:
@@ -77,33 +64,23 @@ def get_uber_access_token():
 
 def get_delivery_quote_cents(lat, lng):
     token = get_uber_access_token()
-    
-    # FIX: If token fails, just return a fallback fee and print the error.
-    # Do not try to return 'response' because it doesn't exist here.
     if not token:
         print("DEBUG: Uber Auth Failed - Using fallback fee")
         return 1250 
 
     api_url = "https://sandbox.api.uber.com/v1/deliveries/quotes" 
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-    
     payload = {
         "pickup_address": os.getenv("UBER_PICKUP_ADDRESS", "123 Main St, San Francisco, CA 94105"), 
         "dropoff_location": {"lat": lat, "lng": lng}
     }
-    
     try:
         response = requests.post(api_url, json=payload, headers=headers, timeout=5)
-        
-        # UNMASKING THE ERROR:
         if response.status_code != 200:
             print(f"🚨 UBER ERROR CODE: {response.status_code}")
-            print(f"🚨 UBER ERROR RESPONSE: {response.text}")
             return 88888 
-            
         data = response.json()
         return int(round(float(data.get('fee', 5.00)) * 100))
-        
     except Exception as e:
         print(f"CRITICAL ERROR: {str(e)}")
         return 77777
@@ -119,23 +96,22 @@ def get_delivery_fee():
 @payment_bp.route('/handle-settlement', methods=['POST'])
 def handle_settlement():
     print(f"DEBUG FORM DATA: {request.form}")
-    fulfillment_method = request.form.get('fulfillment_method') # e.g., 'Delivery', 'Dine-In', 'Reservation'
+    fulfillment_method = request.form.get('fulfillment_method')
     payment_method = request.form.get('payment_method')
     
     table_number = html.escape(request.form.get('table_number', '')).strip()[:10] 
     delivery_address = html.escape(request.form.get('delivery_address', '')).strip()[:500] 
     
-    latitude = request.form.get('latitude')
-    longitude = request.form.get('longitude')
+    latitude = request.form.get('latitude') or "0.0"
+    longitude = request.form.get('longitude') or "0.0"
     
     current_total = get_active_cart_total_cents() 
     base_description = get_cart_items_description_string() 
     
     guest_name = html.escape(request.form.get('guest_name', 'Anonymous Guest')).strip()[:100]
-    guest_contact = html.escape(request.form.get('guest_contact', 'No Phone Provided')).strip()[:30]
-    reservation_time = request.form.get('reservation_time', '')
+    guest_contact = html.escape(request.form.get('guest_contact', 'No Info Provided')).strip()[:30]
+    reservation_time = request.form.get('reservation_time', 'As soon as possible')
 
-    # 1. Map out the fulfillment type and build descriptions
     if fulfillment_method == 'Delivery' and delivery_address:
         delivery_cost = get_delivery_quote_cents(float(latitude), float(longitude))     
         current_total += delivery_cost
@@ -147,19 +123,17 @@ def handle_settlement():
         initial_status = 'Pending'
         
     elif fulfillment_method == 'Reservation':
-        final_description = f"📅 FUTURE RESERVATION for {guest_name} ({guest_contact}) at {reservation_time} | Items: {base_description}"
-    
-    # 🎯 Dynamic Status Assignment based on the payment method
+        final_description = f"📅 RESERVATION: {guest_name} ({guest_contact}) @ {reservation_time} | Items: {base_description}"
+        # Syncing statuses smoothly for dashboard logic filters
         if payment_method == 'Stripe':
             initial_status = 'Reserved - Pending Payment'
         else:
-            initial_status = 'Reserved - Cash'
+            initial_status = 'reserved'
         
     else:
         final_description = f"🛍️ TAKEAWAY | Items: {base_description}"
         initial_status = 'Pending'
 
-    # Create the new database record holding our dynamic initial status
     new_order = Order(
         total_amount=current_total,
         payment_method=payment_method,
@@ -171,15 +145,12 @@ def handle_settlement():
     db.session.add(new_order)
     db.session.commit()
 
-    # 2. Direct the billing pipeline based on payment type
     if payment_method == 'Stripe':
         return redirect(url_for('payment.create_checkout_session', order_id=new_order.id))
     else: 
-        # If paying cash at the venue, handle status routing manually
         if fulfillment_method != 'Reservation':
             new_order.status = 'Pending Cash Payment'
             alert_staff_kitchen_terminal(new_order.id)
-        # (If it IS a reservation, it safely stays as 'reserved')
         db.session.commit()
         return redirect(url_for('cart.order_success', order_id=new_order.id))
 
@@ -187,25 +158,19 @@ def handle_settlement():
 @payment_bp.route('/create-checkout-session/<int:order_id>', methods=['GET','POST'])
 def create_checkout_session(order_id):
     order = Order.query.get_or_404(order_id)
-    
     try:
         checkout_session = stripe.checkout.Session.create(
             payment_method_types=['card'],
             payment_intent_data={'capture_method': 'manual'},
-            line_items=[
-                {
-                    'price_data': {
-                        'currency': 'usd',
-                        'product_data': {
-                            'name': f"LuxeEats Order #{order.id}",
-                        },
-                        'unit_amount': order.total_amount, 
-                    },
-                    'quantity': 1,
-                }
-            ],
+            line_items=[{
+                'price_data': {
+                    'currency': 'usd',
+                    'product_data': {'name': f"LuxeEats Order #{order.id}"},
+                    'unit_amount': order.total_amount, 
+                },
+                'quantity': 1,
+            }],
             mode='payment',
-            # 💡 THE METADATA TUNNEL: We pass the exact current status to Stripe
             metadata={
                 'order_id': str(order.id),
                 'preserved_status': order.status 
@@ -225,9 +190,7 @@ def stripe_webhook():
     event = None
 
     try:
-        event = stripe.Webhook.construct_event(
-            payload, sig_header, STRIPE_WEBHOOK_SECRET
-        )
+        event = stripe.Webhook.construct_event(payload, sig_header, STRIPE_WEBHOOK_SECRET)
     except ValueError as e:
         return jsonify({'error': 'Invalid payload'}), 400
     except stripe.error.SignatureVerificationError as e:
@@ -241,19 +204,17 @@ def stripe_webhook():
     if order_id:
         order = Order.query.get(int(order_id))
         if order:
-            # 🛡️ If it was a reservation session, mark it explicitly as PAID
+            # Shift explicitly to 'reserved' so the admin dashboard catches it
             if preserved_status == 'Reserved - Pending Payment':
-                order.status = 'Reserved - Paid'
-                print(f"📅 Webhook Verified: Reservation #{order_id} updated to PAID.")    
-                # 🛡️ THE WEBHOOK GUARD: If it was a reservation, keep it as 'reserved'!
+                order.status = 'reserved'
+                print(f"📅 Webhook Verified: Reservation #{order_id} marked as active 'reserved'.")    
             elif preserved_status == 'reserved':
                 order.status = 'reserved'
-                print(f"📅 Webhook Verified: Reservation #{order_id} preserved as reserved.")
             else:
                 order.status = 'Paid'
                 print(f"✅ Webhook Verified: Normal order #{order_id} marked as Paid.")
                     
-                db.session.commit()
+            db.session.commit()
 
     return jsonify({'success': True}), 200
 
