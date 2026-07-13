@@ -95,22 +95,23 @@ def orders_stream():
             'time': o.created_at.strftime('%H:%M') if o.created_at else "00:00"
         })
         
-    # Calculate live counters so frontend JavaScript can dynamically re-render metrics cards
-    gross_revenue_calc = db.session.query(func.sum(Order.total_amount)).filter(Order.status != 'Cancelled').scalar() or 0
-    monthly_revenue_calc = db.session.query(func.sum(Order.total_amount)).filter(
+    # FIX: Divide by 100 here to convert raw cents to dollars before sending to JS
+    gross_revenue_calc = (db.session.query(func.sum(Order.total_amount)).filter(Order.status != 'Cancelled').scalar() or 0) / 100
+    monthly_revenue_calc = (db.session.query(func.sum(Order.total_amount)).filter(
         Order.status != 'Cancelled',
-        extract('year',Order.created_at) == current_year,
-        extract('month',Order.created_at) == current_month
-    ).scalar() or 0
+        extract('year', Order.created_at) == current_year,
+        extract('month', Order.created_at) == current_month
+    ).scalar() or 0) / 100
     
     pending_calc = db.session.query(func.count(Order.id)).filter(
         ~Order.status.in_(['Cancelled', 'Completed'])
     ).scalar() or 0
 
+    # Return raw numbers so JavaScript can format them beautifully
     return jsonify({
         'orders': orders_data,
-        'revenue': f"${gross_revenue_calc:.2f}",
-        'monthly_revenue': f"${monthly_revenue_calc:.2f}",
+        'revenue': gross_revenue_calc,
+        'monthly_revenue': monthly_revenue_calc,
         'pending': pending_calc,
         'total_orders_count': len(orders)
     })

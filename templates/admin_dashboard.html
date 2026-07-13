@@ -19,13 +19,13 @@
         <!-- Card 1: Monthly Gross Revenue -->
         <div class="p-6 bg-stone-900 border border-amber-500/20 rounded-xl space-y-2">
             <span class="text-[10px] uppercase tracking-widest font-mono text-amber-500 block">Monthly Gross Sales</span>
-            <span id="metric-monthly-revenue" class="text-3xl font-mono font-bold text-amber-500">${{ "{:,.2f}".format(monthly_revenue) }}</span>
+            <span id="metric-monthly-revenue" class="text-3xl font-mono font-bold text-amber-500">${{ "{:,.0f}".format(monthly_revenue) }}</span>
         </div>
 
         <!-- Card 2: Total Gross Sales (All Time) -->
         <div class="p-6 bg-stone-900 border border-stone-800 rounded-xl space-y-2">
             <span class="text-[10px] uppercase tracking-widest font-mono text-stone-500 block">Total Gross Sales (All Time)</span>
-            <span id="metric-gross-revenue" class="text-3xl font-mono font-bold text-stone-100">${{ ":,.2f".format(revenue) }} </span>
+            <span id="metric-gross-revenue" class="text-3xl font-mono font-bold text-stone-100">${{ "{:,.0f}".format(revenue) }}</span>
         </div>
 
         <!-- Card 3: Active Tickets -->
@@ -107,14 +107,21 @@
 </div>
 
 <script>
+// Format numbers as currency with no decimals for high-end look ($3,425)
+const currencyFormatter = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0
+});
+
 async function updateDashboardStream() {
     try {
         const response = await fetch('/admin/api/orders/stream');
         const data = await response.json();
         
-        // Update metric counters
-        document.getElementById('metric-monthly-revenue').innerText = data.monthly_revenue;
-        document.getElementById('metric-gross-revenue').innerText = data.revenue;
+        // Update metric counters smoothly using the currency formatter
+        document.getElementById('metric-monthly-revenue').innerText = currencyFormatter.format(data.monthly_revenue);
+        document.getElementById('metric-gross-revenue').innerText = currencyFormatter.format(data.revenue);
         document.getElementById('metric-pending-count').innerText = data.pending;
         document.getElementById('metric-total-count').innerText = data.total_orders_count;
         
@@ -133,7 +140,7 @@ async function updateDashboardStream() {
             const currentCards = Array.from(gridContainer.querySelectorAll('.order-card'));
             const currentIds = currentCards.map(card => parseInt(card.id.replace('order-card-', '')));
 
-            // Purge removed order cards
+            // Purge removed order cards safely
             currentIds.forEach(id => {
                 if (!incomingIds.includes(id)) {
                     const cardToRemove = document.getElementById(`order-card-${id}`);
@@ -157,7 +164,9 @@ async function updateDashboardStream() {
                         badge.className = `status-badge text-[10px] uppercase font-mono font-bold px-2 py-0.5 rounded tracking-wider bg-stone-950 border border-stone-800 ${badgeColor}`;
                     }
                     const timeText = existingCard.querySelector('.time-text');
-                    if (timeText) timeText.innerText = order.time;
+                    if (timeText && timeText.innerText !== order.time) {
+                        timeText.innerText = order.time;
+                    }
                 } else {
                     const cardHTML = `
                         <div class="order-card p-5 bg-stone-900 border border-stone-800 rounded-xl space-y-4 flex flex-col justify-between" id="order-card-${order.id}">
@@ -182,53 +191,60 @@ async function updateDashboardStream() {
             });
         }
         
-        // --- SECTION 2: REFRESH LOWER TRANSACTION DISPATCH STREAM ---
-        streamContainer.innerHTML = ''; 
-        data.orders.forEach(order => {
-            let statusClass = 'bg-rose-500/10 text-rose-500';
-            let borderClass = 'border-stone-800';
+        // --- SECTION 2: RECONCILE LOWER STREAM WITHOUT TOTAL BLANKING ---
+        if (streamContainer) {
+            // Assign unique IDs to the stream blocks to handle them safely without wiping innerHTML
+            const streamItems = data.orders.map(order => {
+                let statusClass = 'bg-rose-500/10 text-rose-500';
+                let borderClass = 'border-stone-800';
+                
+                if (order.status === 'Paid') {
+                    statusClass = 'bg-blue-500/10 text-blue-400';
+                    borderClass = 'border-amber-500/20';
+                } else if (order.status === 'Preparing') {
+                    statusClass = 'bg-amber-500/10 text-amber-500';
+                    borderClass = 'border-amber-500/20';
+                } else if (order.status === 'Completed') {
+                    statusClass = 'bg-emerald-500/10 text-emerald-500';
+                }
+                
+                return `
+                    <div id="stream-row-${order.id}" class="p-5 bg-stone-900 border ${borderClass} rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4 transition hover:border-stone-700">
+                        <div class="space-y-1 max-w-xl">
+                            <div class="flex items-center gap-3">
+                                <span class="text-sm font-mono font-bold text-amber-500 bg-stone-950 px-2 py-0.5 border border-stone-800 rounded">Table ${order.table}</span>
+                                <span class="text-[10px] font-mono text-stone-500">${order.time}</span>
+                                <span class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded font-mono font-bold ${statusClass}">${order.status}</span>
+                            </div>
+                            <p class="text-sm text-stone-200 font-medium tracking-wide">${order.description}</p>
+                        </div>
+                        <div class="flex items-center justify-between md:justify-end gap-6 border-t md:border-0 border-stone-800 pt-3 md:pt-0">
+                            <div class="text-left md:text-right">
+                                <span class="text-[10px] uppercase tracking-widest font-mono text-stone-500 block">Settlement</span>
+                                <span class="text-xs font-mono font-bold text-stone-300 uppercase">${order.payment_method}</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-[10px] uppercase tracking-widest font-mono text-stone-500 block">Amount</span>
+                                <span class="text-lg font-mono font-bold text-stone-100">${order.amount}</span>
+                            </div>
+                        </div>
+                    </div>`;
+            }).join('');
             
-            if (order.status === 'Paid') {
-                statusClass = 'bg-blue-500/10 text-blue-400';
-                borderClass = 'border-amber-500/20';
-            } else if (order.status === 'Preparing') {
-                statusClass = 'bg-amber-500/10 text-amber-500';
-                borderClass = 'border-amber-500/20';
-            } else if (order.status === 'Completed') {
-                statusClass = 'bg-emerald-500/10 text-emerald-500';
+            // Only update DOM structure if data string changed to completely kill layout flickering
+            if (streamContainer.dataset.lastRender !== streamItems) {
+                streamContainer.innerHTML = streamItems;
+                streamContainer.dataset.lastRender = streamItems;
             }
-            
-            const streamHTML = `
-                <div class="p-5 bg-stone-900 border ${borderClass} rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4 transition hover:border-stone-700">
-                    <div class="space-y-1 max-w-xl">
-                        <div class="flex items-center gap-3">
-                            <span class="text-sm font-mono font-bold text-amber-500 bg-stone-950 px-2 py-0.5 border border-stone-800 rounded">Table ${order.table}</span>
-                            <span class="text-[10px] font-mono text-stone-500">${order.time}</span>
-                            <span class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded font-mono font-bold ${statusClass}">${order.status}</span>
-                        </div>
-                        <p class="text-sm text-stone-200 font-medium tracking-wide">${order.description}</p>
-                    </div>
-                    <div class="flex items-center justify-between md:justify-end gap-6 border-t md:border-0 border-stone-800 pt-3 md:pt-0">
-                        <div class="text-left md:text-right">
-                            <span class="text-[10px] uppercase tracking-widest font-mono text-stone-500 block">Settlement</span>
-                            <span class="text-xs font-mono font-bold text-stone-300 uppercase">${order.payment_method}</span>
-                        </div>
-                        <div class="text-right">
-                            <span class="text-[10px] uppercase tracking-widest font-mono text-stone-500 block">Amount</span>
-                            <span class="text-lg font-mono font-bold text-stone-100">${order.amount}</span>
-                        </div>
-                    </div>
-                </div>`;
-            streamContainer.insertAdjacentHTML('beforeend', streamHTML);
-        });
+        }
         
     } catch (error) {
         console.error("Error refreshing active ledger streams:", error);
     }
 }
 
-// Auto-execute stream sync every 3 seconds
-setInterval(updateDashboardStream, 3000);
+// Check feed every 8 seconds instead of 3 to stabilize network overhead
+setInterval(updateDashboardStream, 8000);
 
 // Use Event Delegation to listen for kitchen clicks safely
 document.addEventListener('DOMContentLoaded', () => {
@@ -249,18 +265,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return response.json().then(err => { throw new Error(err.error); });
         })
         .then(data => {
-            const card = document.getElementById(`order-card-${orderId}`);
-            if (card) {
-                const badge = card.querySelector('.status-badge');
-                if (badge) {
-                    badge.innerText = targetStatus.toUpperCase();
-                    badge.className = "status-badge text-[10px] uppercase font-mono font-bold px-2 py-0.5 rounded tracking-wider bg-stone-950 border border-stone-800";
-                    if (targetStatus === 'Paid') badge.classList.add('text-blue-400');
-                    else if (targetStatus === 'Preparing') badge.classList.add('text-amber-400');
-                    else if (targetStatus === 'Completed') badge.classList.add('text-emerald-400');
-                    else badge.classList.add('text-rose-400');
-                }
-            }
             updateDashboardStream();
         })
         .catch(error => {
