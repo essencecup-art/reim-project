@@ -47,23 +47,30 @@
             
             <div class="space-y-3">
                 <!-- Guest Name -->
-                <div class="space-y-1">
-                    <label class="text-[10px] font-mono uppercase tracking-wider text-stone-400 block">Full Name</label>
-                    <input type="text" name="guest_name" placeholder="Alexander Wright"
-                        class="w-full bg-stone-900 border border-stone-800 text-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500 transition">
-                </div>
+                <label class="text-[10px] font-mono uppercase tracking-wider text-stone-400 block">Full Name *</label>
+                <input 
+                    type="text" 
+                    name="guest_name" 
+                    placeholder="Alexander Wright"
+                    required 
+                    maxlength="75"
+                    class="w-full bg-stone-900 border border-stone-800 text-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500 transition"
+                >
 
                 <!-- Contact Info -->
-                <div class="space-y-1">
-                    <label class="text-[10px] font-mono uppercase tracking-wider text-stone-400 block">Contact Phone / Email</label>
-                    <input type="text" name="guest_contact" placeholder="alex@corporate.com or (555) 019-2834"
-                        class="w-full bg-stone-900 border border-stone-800 text-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500 transition">
-                </div>
+                <label class="text-[10px] font-mono uppercase tracking-wider text-stone-400 block">Email Address *</label>
+                <input 
+                    type="email" 
+                    name="guest_email" 
+                    placeholder="alex@corporate.com"
+                    required
+                    class="w-full bg-stone-900 border border-stone-800 text-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500 transition"
+                >
 
                 <!-- Date & Time Picker -->
                 <div class="space-y-1">
                     <label class="text-[10px] font-mono uppercase tracking-wider text-stone-400 block">Target Event Date & Time</label>
-                    <input type="datetime-local" name="reservation_time"
+                    <input type="datetime-local" name="reservation_time" required
                         class="w-full bg-stone-900 border border-stone-800 text-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500 transition font-mono">
                 </div>
             </div>
