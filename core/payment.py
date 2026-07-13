@@ -152,6 +152,7 @@ def handle_settlement():
             new_order.status = 'Pending Cash Payment'
             alert_staff_kitchen_terminal(new_order.id)
         db.session.commit()
+        session.pop('cart', None)
         return redirect(url_for('cart.order_success', order_id=new_order.id))
 
 
@@ -220,6 +221,7 @@ def stripe_webhook():
 
 @payment_bp.route('/payment-success/<int:order_id>')
 def payment_success(order_id):
+    session.pop('cart', None)
     return redirect(url_for('cart.order_success', order_id=order_id))
 
 @payment_bp.route('/payment-cancel/<int:order_id>')
