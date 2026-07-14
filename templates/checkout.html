@@ -51,8 +51,8 @@
                 <input 
                     type="text" 
                     name="guest_name" 
-                    placeholder="Alexander Wright"
-                    required 
+                    id="guest_name"
+                    placeholder="Alexander Wright" 
                     maxlength="75"
                     class="w-full bg-stone-900 border border-stone-800 text-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500 transition"
                 >
@@ -62,15 +62,15 @@
                 <input 
                     type="email" 
                     name="guest_email" 
+                    id="guest_email"
                     placeholder="alex@corporate.com"
-                    required
                     class="w-full bg-stone-900 border border-stone-800 text-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500 transition"
                 >
 
                 <!-- Date & Time Picker -->
                 <div class="space-y-1">
                     <label class="text-[10px] font-mono uppercase tracking-wider text-stone-400 block">Target Event Date & Time</label>
-                    <input type="datetime-local" name="reservation_time" required
+                    <input type="datetime-local" name="reservation_time" id="reservation_time"
                         class="w-full bg-stone-900 border border-stone-800 text-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500 transition font-mono">
                 </div>
             </div>
@@ -190,5 +190,20 @@
         toggleFulfillmentInputs();
         togglePaymentNotice();
     });
+
+function processOrder() {
+    const nameInput = document.getElementById('guest_name').value.trim();
+    const emailInput = document.getElementById('guest_email').value.trim();
+    const timeInput = document.getElementById('reservation_time').value.trim();
+
+    // Custom JS check instead of native HTML browser validation
+    if (!nameInput || !emailInput || !timeInput) {
+        alert("Please make sure your name, email, and time are filled out!");
+        return; // 🛑 Stops the order from processing if empty
+    }
+
+    // ... your actual order processing code goes here ...
+}
+
 </script>
 {% endblock %}
